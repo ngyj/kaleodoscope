@@ -1,4 +1,4 @@
-#incldue <string>
+#include <string>
 
 // lexer returns tokens [0-255] if unknown char
 // otherwise one of these
@@ -11,17 +11,19 @@ enum token_t {
     tok_identifier = -4,
     tok_number = -5,
 };
+
 template<typename T>
-struct Token<T> {
-    token_t tok_t;
-    std::string lex;
+struct Token {
+// TODO
+    token_t type;
+    std::string lexeme;
     T lit;
     //int line;
     Token(token_t token_type, std::string lexeme)
-        : tok_t(token_type), lex(lexeme) {}
+        : type(token_type), lexeme(lexeme) {}
     Token(token_t token_type, std::string lexeme, T literal)
-        : tok_t(token_type), lex(lexeme), lit(literal) {}
-}
+        : type(token_type), lexeme(lexeme), lit(literal) {}
+};
 
 static std::string identifier_str; // if tok_identifier
 static double num_val;             // if tok_number
@@ -29,27 +31,27 @@ static double num_val;             // if tok_number
 static int gettok() {
   static int lastchar = ' ';
 
-  while (is_space(lastchar))
+  while (isspace(lastchar))
       lastchar = getchar();
 
-  if (is_alpha(lastchar)) {
+  if (isalpha(lastchar)) {
       identifier_str = lastchar;
-      while (is_alnum((lastchar = getchar())))
+      while (isalnum((lastchar = getchar())))
           identifier_str += lastchar;
 
       if (identifier_str == "def")
           return tok_def;
-      if (IdentifierStr == "extern")
+      if (identifier_str == "extern")
           return tok_extern;
       return tok_identifier;
   }
   if (isdigit(lastchar) || lastchar == '.') {
-      std::string NumStr;
+      std::string num_str;
       do {
-          NumStr += lastchar;
+          num_str += lastchar;
           lastchar = getchar();
-      } while (is_digit(lastchar)|| lastchar == '.');
-      num_val = strtod(NumStr.c_str(), 0);
+      } while (isdigit(lastchar) || lastchar == '.');
+      num_val = strtod(num_str.c_str(), 0);
       return tok_number;
   }
   // comment until eol
@@ -60,7 +62,7 @@ static int gettok() {
       if (lastchar != EOF)
           return gettok();
   }
-  if (lastcahr == EOF)
+  if (lastchar == EOF)
       return tok_eof;
   int rchar = lastchar;
   lastchar = getchar();

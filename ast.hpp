@@ -1,4 +1,6 @@
-#include "lexer.hpp"
+#include <string>
+#include <vector>
+#include <memory>
 
 // --- the AST ---
 class ExprAST {
@@ -19,12 +21,12 @@ public:
 };
 /// binary operators
 class BinaryExprAST : public ExprAST {
-    char Op;
+    char op;
     std::unique_ptr<ExprAST> LHS, RHS;
 public:
-    BinaryExprAST(char Op, std::unique_ptr<ExprAST> LHS
+    BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS
                   , std::unique_ptr<ExprAST> RHS)
-        : Op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+        : op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 };
 /// function calls
 class CallExprAST : public ExprAST {
@@ -33,10 +35,10 @@ class CallExprAST : public ExprAST {
 public:
     CallExprAST(const std::string &name
                 , std::vector<std::unique_ptr<ExprAST>> args)
-        : callee(callee), args(std::move(args)) {}
+        : callee(name), args(std::move(args)) {}
 };
 /// captures name and argument names for a function
-class ProtoypeAST {
+class PrototypeAST {
     /* a way to talk about the interface to a function */
     std::string name;
     std::vector<std::string> args;
@@ -48,7 +50,7 @@ public:
 };
 /// function defintion
 class FunctionAST {
-    std::unique_ptr<ProtoypeAST> proto;
+    std::unique_ptr<PrototypeAST> proto;
     std::unique_ptr<ExprAST> body;
 public:
     FunctionAST(std::unique_ptr<PrototypeAST> proto
