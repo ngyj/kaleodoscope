@@ -3,13 +3,9 @@ CPP = clang++
 
 all: main
 
-ast.o : ast.hpp
-	$(CPP) $(FLAGS) -c ast.hpp
+ast : ast.hpp
 
-lexer.o : lexer.hpp
-	$(CPP) $(FLAGS) -c lexer.hpp
-
-parser.o : parser.cpp parser.hpp lexer.o ast.o
+parser.o : parser.cpp parser.hpp ast
 	$(CPP) $(FLAGS) -c parser.cpp
 
 main : parser.o
