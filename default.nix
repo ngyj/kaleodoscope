@@ -5,10 +5,10 @@
 
 with pkgs;
 
-clangStdenv.mkDerivation rec {
+stdenvNoCC.mkDerivation {
     name = "kaleo-${version}";
     inherit version;
     src = lib.cleanSource source;
-    buildInputs = [ makeWrapper ];
+    buildInputs = [ clang_7 makeWrapper ];
     enableParallelBuilding = true;
 }
