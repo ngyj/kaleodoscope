@@ -8,24 +8,54 @@
 namespace m = std;
 //namespace m = llvm;
 
-Parser::Parser(std::iostream& src)
+/// TEMP
+std::string tok_to_string(int token) {
+    switch (token) {
+    case tok_eof:
+        return "tok_eof";
+    case tok_def:
+        return "tok_def";
+    case tok_extern:
+        return "tok_extern";
+    case tok_identifier:
+        return "tok_id";
+    case tok_number:
+        return "tok_number";
+    case tok_op:
+        return "tok_op";
+    default:
+        return "tok_*";
+    }
+}
+/// TEMP
+std::string Parser::to_string() {
+    switch (cur_token->type) {
+    case tok_eof:
+    case tok_def:
+    case tok_extern:
+        return tok_to_string(cur_token->type);
+    default:
+        return tok_to_string(cur_token->type) +": \""+ cur_token->lexeme +"\"";
+    }
+}
+
+
+Parser::Parser(std::istream& src)
     : src(src), cur_line(0) {
     cur_token = nullptr;
     binop_prec = {{'<', 10}, {'+', 20}, {'-', 20}, {'*', 40}};
 };
 
 std::unique_ptr<Token> Parser::get_token() {
-    // TODO rewrite ugly if/else
-    int lastchar = ' ';
+    // FIXME peek without eating
+    while (isspace(src.peek()))
+        src.get();
 
-    while (isspace(lastchar))
-        lastchar = src.get();
-
-    if (isalpha(lastchar)) {
+    if (isalpha(src.peek())) {
         std::string tmp;
-        tmp = lastchar;
-        while (isalnum((lastchar = src.get())))
-            tmp += lastchar;
+        tmp = src.get();
+        while (isalnum(src.peek()))
+            tmp += src.get();
 
         if (tmp == "def")
             return std::make_unique<Token>(tok_def, tmp);
@@ -33,30 +63,28 @@ std::unique_ptr<Token> Parser::get_token() {
             return std::make_unique<Token>(tok_def, tmp);
         return std::make_unique<Token>(tok_identifier, tmp);
     }
-    if (isdigit(lastchar) || lastchar == '.') {
+    if (isdigit(src.peek()) || src.peek() == '.') {
         std::string num_str;
         do {
-            num_str += lastchar;
-            lastchar = src.get();
-        } while (isdigit(lastchar) || lastchar == '.');
+            num_str += src.get();
+        } while (isdigit(src.peek()) || src.peek() == '.');
         return std::make_unique<Token>(tok_number, num_str);
     }
     // ignore comment until eol
-    if (lastchar == '#') {
+    if (src.peek() == '#') {
+        char tmp;
         do {
-            lastchar = src.get();
-        } while (lastchar != EOF && lastchar != '\n' && lastchar != '\r');
-        if (lastchar != EOF)
+            tmp = src.get();
+        } while (tmp != EOF && tmp != '\n' && tmp != '\r');
+        if (tmp != EOF)
             return get_token();
     }
-    if (lastchar == EOF)
+    if (src.eof())
         return std::make_unique<Token>(tok_eof, "");
 
-    // FIXME
-    // what do if unknown token?
-    int rchar = lastchar;
-    lastchar = src.get();
-    return std::make_unique<Token>(rchar, "");
+    // TODO unknown token should be errors
+    char _ignore = src.get();
+    return std::make_unique<Token>(_ignore, std::string(1, _ignore));
 }
 
 int Parser::next_token() {
@@ -99,10 +127,10 @@ std::unique_ptr<ExprAST> Parser::parse_paren_expr() {
 /// identifierexpr ::= identifier
 ///                ::= identifier '(' expression* ')'
 std::unique_ptr<ExprAST> Parser::parse_id_expr() {
-    std::string id_name = identifier_str;
+    std::string id_name = cur_token->lexeme;
 
     next_token(); // eat identifier
-    if (cur_token != '(')
+    if (cur_token->type != '(')
         return m::make_unique<VariableExprAST>(id_name);
 
     // call
@@ -146,7 +174,7 @@ std::unique_ptr<ExprAST> Parser::parse_primary() {
 }
 
 /// get current token precedence
-int get_token_prec(const Token *tok) {
+int Parser::get_token_prec(const Token *tok) {
     if (!isascii(tok->type)) // TODO tok->type == token_op
         return -1;
 
@@ -178,7 +206,7 @@ std::unique_ptr<ExprAST> Parser::parse_binop_rhs(int expr_prec
 
         // if binop binds less tightly with rhs than the operator after rhs,
         // let pending op take rhs as its lhs
-        int nprec = get_token_prec();
+        int nprec = get_token_prec(cur_token.get());
         if (tprec < nprec) {
             rhs = parse_binop_rhs(tprec+1, std::move(rhs));
             if (!rhs)
@@ -206,7 +234,7 @@ std::unique_ptr<PrototypeAST> Parser::parse_prototype() {
     if (cur_token->type != tok_identifier)
         return log_errorP("Excpected function name in the prototype");
 
-    std::string fn_name = identifier_str;
+    std::string fn_name = cur_token->lexeme;
     next_token();
 
     if (cur_token->type != '(')
@@ -214,7 +242,7 @@ std::unique_ptr<PrototypeAST> Parser::parse_prototype() {
 
     std::vector<std::string> arg_names;
     while (next_token() == tok_identifier)
-        arg_names.push_back(identifier_str);
+        arg_names.push_back(cur_token->lexeme);
     if (cur_token->type != ')')
         return log_errorP("Expected ')' in prototype");
 
