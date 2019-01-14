@@ -9,6 +9,6 @@ stdenvNoCC.mkDerivation {
     name = "kaleo-${version}";
     inherit version;
     src = lib.cleanSource source;
-    buildInputs = [ clang_7 makeWrapper ];
+    buildInputs = [ llvm_7 clang_7 makeWrapper ];
     enableParallelBuilding = true;
 }

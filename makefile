@@ -1,16 +1,18 @@
-FLAGS = -O2 -Wextra -g
-CPP = clang++
+CXX = clang++
+LLVM := `llvm-config --cxxflags --ldflags --system-libs --libs core`
+CXXFLAGS = -O2 -Wextra -g $(LLVM)
 
 all: main
 
-ast.o : ast.hpp
-	$(CPP) $(FLAGS) -c ast.hpp
+clean :
+	rm *.o
+	rm main
 
-lexer.o : lexer.hpp
-	$(CPP) $(FLAGS) -c lexer.hpp
+ast.o : ast.hpp ast.cpp
 
-parser.o : parser.cpp parser.hpp lexer.o ast.o
-	$(CPP) $(FLAGS) -c parser.cpp
+parser.o : parser.cpp parser.hpp ast.hpp
 
-main : parser.o
-	$(CPP) $(FLAGs) -o $@ main.cpp $^
+main.o : main.cpp parser.hpp
+
+main : ast.o parser.o main.o
+	$(CXX) $(CXXFLAGS) -o $@ $^

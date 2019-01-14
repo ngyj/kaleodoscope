@@ -1,24 +1,64 @@
-#include <memory>
-#include <vector>
-#include <map>
+#include "llvm/ADT/STLExtras.h"
 
 #include "parser.hpp"
-// FIXME #include "llvm/ADT/STLExtras.h"
-namespace llvm = std;
 
 int cur_token = 0;
 std::map<char, int> binop_prec = {{'<', 10}, {'+', 20}, {'-', 20}, {'*', 40}};
+
+static std::string identifier_str; // if tok_identifier
+static double num_val;             // if tok_number
+
+static int gettok() {
+  static int lastchar = ' ';
+
+  while (isspace(lastchar))
+      lastchar = getchar();
+
+  if (isalpha(lastchar)) {
+      identifier_str = lastchar;
+      while (isalnum((lastchar = getchar())))
+          identifier_str += lastchar;
+
+      if (identifier_str == "def")
+          return tok_def;
+      if (identifier_str == "extern")
+          return tok_extern;
+      return tok_identifier;
+  }
+  if (isdigit(lastchar) || lastchar == '.') {
+      std::string num_str;
+      do {
+          num_str += lastchar;
+          lastchar = getchar();
+      } while (isdigit(lastchar) || lastchar == '.');
+      num_val = strtod(num_str.c_str(), 0);
+      return tok_number;
+  }
+  // comment until eol
+  if (lastchar == '#') {
+      do {
+       lastchar = getchar();
+      } while (lastchar != EOF && lastchar != '\n' && lastchar != '\r');
+      if (lastchar != EOF)
+          return gettok();
+  }
+  if (lastchar == EOF)
+      return tok_eof;
+  int rchar = lastchar;
+  lastchar = getchar();
+  return rchar;
+}
 
 int next_token() {
     return cur_token = gettok();
 }
 
 /// LogError* - helper functions for error handling
-std::unique_ptr<ExprAST> log_error(const char *str) {
-    fprintf(stderr, "logerror: %s\n", str);
+std::unique_ptr<ExprAST> err::log_errorE(const char *str) {
+    log_error(str);
     return nullptr;
 }
-std::unique_ptr<PrototypeAST> log_errorP(const char *str) {
+std::unique_ptr<PrototypeAST> err::log_errorP(const char *str) {
     log_error(str);
     return nullptr;
 }
@@ -38,7 +78,7 @@ std::unique_ptr<ExprAST> parse_paren_expr() {
         return nullptr;
 
     if(cur_token != ')')
-        return log_error("expected ')'");
+        return err::log_errorE("expected ')'");
     next_token(); // eat )
     return e;
 }
@@ -65,7 +105,7 @@ std::unique_ptr<ExprAST> parse_id_expr() {
             if (cur_token == ')')
                 break;
             if (cur_token != ',')
-                return log_error("Excpected ')' or ',' in argument list");
+                return err::log_errorE("Excpected ')' or ',' in argument list");
             next_token();
         }
     }
@@ -82,7 +122,7 @@ std::unique_ptr<ExprAST> parse_id_expr() {
 std::unique_ptr<ExprAST> parse_primary() {
     switch (cur_token) {
     default:
-        return log_error("unknown token when expecting an expression");
+        return err::log_errorE("unknown token when expecting an expression");
     case tok_identifier:
         return parse_id_expr();
     case tok_number:
@@ -148,19 +188,19 @@ std::unique_ptr<ExprAST> parse_expr() {
 ///   ::= id '(' id* ')'
 std::unique_ptr<PrototypeAST> parse_prototype() {
     if (cur_token != tok_identifier)
-        return log_errorP("Excpected function name in the prototype");
+        return err::log_errorP("Excpected function name in the prototype");
 
     std::string fn_name = identifier_str;
     next_token();
 
     if (cur_token != '(')
-        return log_errorP("Expected '(' in protoype");
+        return err::log_errorP("Expected '(' in protoype");
 
     std::vector<std::string> arg_names;
     while (next_token() == tok_identifier)
         arg_names.push_back(identifier_str);
     if (cur_token != ')')
-        return log_errorP("Expected ')' in prototype");
+        return err::log_errorP("Expected ')' in prototype");
 
     // success
     next_token();
