@@ -5,9 +5,16 @@
 #include <vector>
 #include <memory>
 
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 
 using llvm::Value;
+using llvm::Function;
+
+// FIXME no more globals please
+extern llvm::LLVMContext ctx;
+extern std::unique_ptr<llvm::Module> module;
 
 namespace err {
 // FIXME move me to a better place
@@ -66,7 +73,8 @@ public:
                  , std::vector<std::string> args)
         : name(name), args(std::move(args)) {}
     const std::string &get_name() const { return name; }
-    virtual Value *codegen();
+    const std::vector<std::string> &get_args() const { return args; }
+    Function *codegen();
 };
 /// function defintion
 class FunctionAST {
@@ -76,6 +84,6 @@ public:
     FunctionAST(std::unique_ptr<PrototypeAST> proto
                 , std::unique_ptr<ExprAST> body)
         : proto(std::move(proto)), body(std::move(body)) {}
-    virtual Value *codegen();
+    Function *codegen();
 };
 #endif

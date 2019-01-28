@@ -1,16 +1,14 @@
 #include "ast.hpp"
+#include <iostream>
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Verifier.h"
 
 using llvm::Value;
 
-static llvm::LLVMContext ctx;
 static llvm::IRBuilder<> builder(ctx);
-static std::unique_ptr<llvm::Module> module;
 static std::map<std::string, Value *> named_vs;
 
 
@@ -63,15 +61,15 @@ Value *CallExprAST::codegen() {
     // lookup the name in global module table.
     llvm::Function *cf = module->getFunction(callee);
     if (!cf)
-        return log_errorV("unknown function referenced");
+        return err::log_errorV("unknown function referenced");
 
     // argument mismatch error.
     if (cf->arg_size() != args.size())
-        return log_errorV("incorrect # arguments passed");
+        return err::log_errorV("incorrect # arguments passed");
 
     std::vector<Value *> vargs;
-    for (auto e : vargs) {
-        vargs.push_back(e->codegen());
+    for (size_t i = 0; i != args.size(); i++) {
+        vargs.push_back(args[i]->codegen());
         if (!vargs.back())
             return nullptr;
     }
@@ -89,7 +87,7 @@ llvm::Function *PrototypeAST::codegen() {
 
     llvm::Function *f =
         llvm::Function::Create(fty, llvm::Function::ExternalLinkage
-                               , name, module);
+                               , name, module.get());
 
     // set name of funcs argument according to names given in protype
     unsigned idx = 0;
@@ -103,19 +101,29 @@ llvm::Function *FunctionAST::codegen() {
     // check for existing function from previous 'extern' declaration
     llvm::Function *f = module->getFunction(proto->get_name());
 
-    if(!f)
+    if(f) {
+        if(proto->get_args().size() != f->args().end() - f->args().begin())
+            // FIXME reporting func name
+            return (llvm::Function*) err::log_errorV("conflicting function declarations");
+        // if extern names args differently we need to rename them in def
+        auto it = proto->get_args().begin();
+        for (auto &arg : f->args())
+            arg.setName(* it++);
+
+    } else {
         f = proto->codegen();
+    }
     if (!f)
         return nullptr;
     if(!f->empty()) // assert function has no body before we start
-        return (llvm::Function*) log_errorV("function cannot be defined");
+        return (llvm::Function*) err::log_errorV("function cannot be defined");
 
     // create new basic block for insertion
     llvm::BasicBlock *bb = llvm::BasicBlock::Create(ctx, "entry", f);
     builder.SetInsertPoint(bb);
 
     // record the function arguments in the named_vs
-    named_Vs.clear(); // FIXME why clear() tho?
+    named_vs.clear(); // QUESTION why clear() tho?
     for (auto &arg : f->args())
         named_vs[arg.getName()] = &arg;
 
@@ -124,12 +132,8 @@ llvm::Function *FunctionAST::codegen() {
 
         // validate generated code
         llvm::verifyFunction(*f);
-        return f
+        return f;
     }
     f->eraseFromParent();
     return nullptr;
-    // FIXME
-    // extern foo(a);
-    // def foo(b) b;
-    // named_vs with proto->args ?
 }

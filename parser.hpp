@@ -78,22 +78,6 @@ public:
     std::string to_string();
 };
 
-/// binopPrecedence - holds precedence for every defined binary operator
-// FIXME init somewhere else
-extern std::map<char, int> binop_prec;
-
-// lexer returns tokens [0-255] if unknown char
-// otherwise one of these
-enum token_t {
-    tok_eof = -1,
-    // commands
-    tok_def = -2,
-    tok_extern = -3,
-    // primary
-    tok_identifier = -4,
-    tok_number = -5,
-};
-
 namespace err {
     /// LogError* - helper functions for error handling
     std::unique_ptr<ExprAST> log_errorE(const char *str);

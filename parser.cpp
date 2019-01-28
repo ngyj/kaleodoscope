@@ -62,7 +62,7 @@ std::unique_ptr<Token> Parser::get_token() {
         if (tmp == "def")
             return m::make_unique<Token>(tok_def, tmp);
         if (tmp == "extern")
-            return m::make_unique<Token>(tok_def, tmp);
+            return m::make_unique<Token>(tok_extern, tmp);
         return m::make_unique<Token>(tok_identifier, tmp);
     }
     if (isdigit(src.peek()) || src.peek() == '.') {
@@ -148,7 +148,7 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
             if (cur_token->type == ')')
                 break;
             if (cur_token->type != ',')
-                return err::log_error("Excpected ')' or ',' in argument list");
+                return err::log_errorE("Excpected ')' or ',' in argument list");
             next_token();
         }
     }
@@ -164,14 +164,14 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
 ///    ::= paren_expr
 std::unique_ptr<ExprAST> Parser::parse_primary() {
     switch (cur_token->type) {
+    default:
+        return err::log_errorE("unknown token when expecting an expression");
     case tok_identifier:
         return parse_id_expr();
     case tok_number:
         return parse_num_expr();
     case '(':
         return parse_paren_expr();
-    default:
-        return err::log_errorE("unknown token when expecting an expression");
     }
 }
 
