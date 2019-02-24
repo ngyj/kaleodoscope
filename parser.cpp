@@ -49,7 +49,6 @@ Parser::Parser(std::istream& src)
 };
 
 std::unique_ptr<Token> Parser::get_token() {
-    // FIXME peek without eating
     while (isspace(src.peek()))
         src.get();
 
@@ -84,27 +83,15 @@ std::unique_ptr<Token> Parser::get_token() {
     if (src.eof())
         return m::make_unique<Token>(tok_eof, "");
 
-    // TODO unknown token should be errors
+    // TODO unknown token should be errors ??
     char _ignore = src.get();
     return m::make_unique<Token>(_ignore, std::string(1, _ignore));
 }
 
 int Parser::next_token() {
-    // FIXME
     cur_token = get_token();
     return cur_token->type;
 }
-
-/// LogError* - helper functions for error handling
-std::unique_ptr<ExprAST> err::log_errorE(const char *str) {
-    log_error(str);
-    return nullptr;
-}
-std::unique_ptr<PrototypeAST> err::log_errorP(const char *str) {
-    log_error(str);
-    return nullptr;
-}
-
 
 /// numerexpr ::= number
 std::unique_ptr<ExprAST> Parser::parse_num_expr() {

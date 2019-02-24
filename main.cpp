@@ -11,7 +11,7 @@ std::unique_ptr<llvm::Module> module;
 void handleDef(Parser& p){
     if (auto fnAST = p.parse_definition()) {
         if (auto *fnIR = fnAST->codegen()) {
-            fprintf(stderr, "read function definition:");
+            fprintf(stderr, "[read function definition]");
             fnIR->print(llvm::errs());
             fprintf(stderr, "\n");
         }
@@ -22,7 +22,7 @@ void handleDef(Parser& p){
 void handleExt(Parser& p){
     if (auto protoAST = p.parse_extern()) {
         if (auto *fnIR = protoAST->codegen()) {
-            fprintf(stderr, "read extern:");
+            fprintf(stderr, "[read extern declaration]");
             fnIR->print(llvm::errs());
             fprintf(stderr, "\n");
         }
@@ -33,7 +33,7 @@ void handleExt(Parser& p){
 void handleTLE(Parser& p){
     if (auto fnAST = p.parse_tle()) {
         if(auto *fnIR = fnAST->codegen()) {
-            fprintf(stderr, "read top-level expression:");
+            fprintf(stderr, "[read top-level expression]");
             fnIR->print(llvm::errs());
             fprintf(stderr, "\n");
         }
@@ -62,11 +62,18 @@ void loop(Parser& p) {
         }
     }
 }
+void init_module_passman() {
+    module = m::make_unique<llvm::Module>("my jit", ctx);
+    fpm = llvm::make_unique<FunctionPassManager>(module.get());
+
+    //
+}
 
 void parse_in(std::istream& src) {
     auto p = Parser(src);
     module = m::make_unique<llvm::Module>("my jit", ctx);
     loop(p);
+    fprintf(stderr, "\n--------\n");
     module->print(llvm::errs(), nullptr);
 }
 

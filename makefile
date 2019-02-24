@@ -1,6 +1,8 @@
 CXX = clang++
 LLVM := `llvm-config --cxxflags --ldflags --system-libs --libs core`
-CXXFLAGS = -O2 -Wextra -g $(LLVM) -std=c++17
+CXXFLAGS = -O2 -Wextra -g $(LLVM) -std=c++17 \
+					 -Wno-unused-command-line-argument \
+					 -Wno-unknown-warning-option
 
 all: main
 
