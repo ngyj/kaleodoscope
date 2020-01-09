@@ -46,7 +46,6 @@ public:
     Parser(std::istream& src);
     std::unique_ptr<Token> get_token();
     int next_token();
-    // FIXME just FIXME
     int get_token_prec(const Token *tok);
 
     /// numerexpr ::= number
@@ -77,11 +76,5 @@ public:
     /// TEMP
     std::string to_string();
 };
-
-namespace err {
-    /// LogError* - helper functions for error handling
-    std::unique_ptr<ExprAST> log_errorE(const char *str);
-    std::unique_ptr<PrototypeAST> log_errorP(const char *str);
-}
 
 #endif //PARSER_H

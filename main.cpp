@@ -71,11 +71,17 @@ void loop(Parser& p) {
         }
     }
 }
+void init_module_passman() {
+    module = m::make_unique<llvm::Module>("my jit", ctx);
+    fpm = llvm::make_unique<FunctionPassManager>(module.get());
+
+    //
+}
 
 void parse_in(std::istream& src) {
     auto p = Parser(src);
     loop(p);
-    fprintf(stderr, "-----------\n");
+    fprintf(stderr, "\n--------\n");
     module->print(llvm::errs(), nullptr);
 }
 

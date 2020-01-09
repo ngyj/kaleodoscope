@@ -16,13 +16,6 @@ using llvm::Function;
 extern llvm::LLVMContext ctx;
 extern std::unique_ptr<llvm::Module> module;
 
-namespace err {
-// FIXME move me to a better place
-    void log_error(const char *str);
-
-    Value *log_errorV(const char *str);
-}
-
 // --- the AST ---
 class ExprAST {
 public:
@@ -86,4 +79,13 @@ public:
         : proto(std::move(proto)), body(std::move(body)) {}
     Function *codegen();
 };
+
+namespace err {
+    // REFACTOR move me to a better place
+    void log_error(const char *str);
+    Value *log_errorV(const char *str);
+
+    std::unique_ptr<ExprAST> log_errorE(const char *str);
+    std::unique_ptr<PrototypeAST> log_errorP(const char *str);
+}
 #endif

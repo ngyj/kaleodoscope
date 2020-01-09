@@ -1,10 +1,11 @@
-#include "ast.hpp"
-#include <iostream>
+#include <memory>
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Verifier.h"
+
+#include "ast.hpp"
 
 using llvm::Value;
 
@@ -19,6 +20,15 @@ Value *err::log_errorV(const char *str) {
     err::log_error(str);
     return nullptr;
 }
+std::unique_ptr<ExprAST> err::log_errorE(const char *str) {
+    log_error(str);
+    return nullptr;
+}
+std::unique_ptr<PrototypeAST> err::log_errorP(const char *str) {
+    log_error(str);
+    return nullptr;
+}
+
 
 Value *NumberExprAST::codegen() {
     // numeric constants represented with ConstantFP,
@@ -102,10 +112,10 @@ llvm::Function *FunctionAST::codegen() {
     llvm::Function *f = module->getFunction(proto->get_name());
 
     if(f) {
-        if(proto->get_args().size() != f->arg_size())
-            // FIXME reporting func name
+        if(f->arg_size() != proto->get_args().size())
+            // FIXME function name, line number and shit in error
             return (llvm::Function*) err::log_errorV("conflicting function declarations");
-        // if extern names args differently we need to rename them in def
+        // if prior parsed proto has different arg names we need to rename them here
         auto it = proto->get_args().begin();
         for (auto &arg : f->args())
             arg.setName(* it++);
