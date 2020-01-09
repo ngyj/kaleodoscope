@@ -102,7 +102,7 @@ llvm::Function *FunctionAST::codegen() {
     llvm::Function *f = module->getFunction(proto->get_name());
 
     if(f) {
-        if(proto->get_args().size() != f->args().end() - f->args().begin())
+        if(proto->get_args().size() != f->arg_size())
             // FIXME reporting func name
             return (llvm::Function*) err::log_errorV("conflicting function declarations");
         // if extern names args differently we need to rename them in def

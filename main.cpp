@@ -11,9 +11,9 @@ std::unique_ptr<llvm::Module> module;
 void handleDef(Parser& p){
     if (auto fnAST = p.parse_definition()) {
         if (auto *fnIR = fnAST->codegen()) {
-            fprintf(stderr, "read function definition:");
+            fprintf(stderr, "{{{ def");
             fnIR->print(llvm::errs());
-            fprintf(stderr, "\n");
+            fprintf(stderr, "}}}\n");
         }
     } else {
         p.next_token();
@@ -22,9 +22,9 @@ void handleDef(Parser& p){
 void handleExt(Parser& p){
     if (auto protoAST = p.parse_extern()) {
         if (auto *fnIR = protoAST->codegen()) {
-            fprintf(stderr, "read extern:");
+            fprintf(stderr, "{{{ extern");
             fnIR->print(llvm::errs());
-            fprintf(stderr, "\n");
+            fprintf(stderr, "}}}\n");
         }
     } else {
         p.next_token();
@@ -33,9 +33,18 @@ void handleExt(Parser& p){
 void handleTLE(Parser& p){
     if (auto fnAST = p.parse_tle()) {
         if(auto *fnIR = fnAST->codegen()) {
-            fprintf(stderr, "read top-level expression:");
+            aut H = jit->addModule(std::move(module));
+            init_module_pm();
+
+            auto expr_sym = jit->findSymbol("__anon_expr");
+            assert(expr_sym && "Function not found");
+
+
+            double (*FP)() = (double (*)())(intptr_t)expr_sym.getAddress();
+
+            fprintf(stderr, "{{{ tle");
             fnIR->print(llvm::errs());
-            fprintf(stderr, "\n");
+            fprintf(stderr, "}}}\n");
         }
     } else {
         p.next_token();
@@ -65,9 +74,22 @@ void loop(Parser& p) {
 
 void parse_in(std::istream& src) {
     auto p = Parser(src);
-    module = m::make_unique<llvm::Module>("my jit", ctx);
     loop(p);
+    fprintf(stderr, "-----------\n");
     module->print(llvm::errs(), nullptr);
+}
+
+void init_module_pm() {
+    module = m:make_unique<llvm::Module>("my jit", ctx);
+    module->setDataLayou(jit->getTargetMachine().createDataLayout());
+
+    fpm = m::make_unique<llvm::FunctionPassManager>(module.get());
+
+    fpm->add(createInstructionCombiningPass());
+    fpm->add(createReassociatePass());
+    fpm->add(createGVNPass());
+    fpm->add(createCFGSimplificationPass());
+    fpm->doInitialization();
 }
 
 void repl() {
