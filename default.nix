@@ -11,4 +11,13 @@ stdenvNoCC.mkDerivation {
     src = lib.cleanSource source;
     buildInputs = [ llvm_7 clang_7 makeWrapper ];
     enableParallelBuilding = true;
+
+    buildPhase = ''
+      make all
+    '';
+
+    installPhase = ''
+      mkdir -p $out
+      cp kaleodoscope $out/
+    '';
 }

@@ -4,7 +4,9 @@ CXXFLAGS = -O2 -Wextra -g $(LLVM) -std=c++17 \
 					 -Wno-unused-command-line-argument \
 					 -Wno-unknown-warning-option
 
-all: main
+.PHONY : all
+
+all: kaleodoscope
 
 clean :
 	rm *.o
@@ -16,5 +18,5 @@ parser.o : parser.cpp parser.hpp ast.hpp
 
 main.o : main.cpp parser.hpp
 
-main : ast.o parser.o main.o
+kaleodoscope: ast.o parser.o main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
