@@ -7,14 +7,11 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-namespace m = std;
-//namespace m = llvm;
-
 /// TEMP
 std::string tok_to_string(int token) {
     switch (token) {
     case tok_eof:
-        return "tok_eof";
+        return "<END>";
     case tok_def:
         return "tok_def";
     case tok_extern:
@@ -30,14 +27,14 @@ std::string tok_to_string(int token) {
     }
 }
 /// TEMP
-std::string Parser::to_string() {
-    switch (cur_token->type) {
+std::string Token::to_string() {
+    switch (type) {
     case tok_eof:
     case tok_def:
     case tok_extern:
-        return tok_to_string(cur_token->type);
+        return tok_to_string(type);
     default:
-        return tok_to_string(cur_token->type) +": \""+ cur_token->lexeme +"\"";
+        return tok_to_string(type) +": \""+ lexeme +"\"";
     }
 }
 
@@ -59,17 +56,17 @@ std::unique_ptr<Token> Parser::get_token() {
             tmp += src.get();
 
         if (tmp == "def")
-            return m::make_unique<Token>(tok_def, tmp);
+            return std::make_unique<Token>(tok_def, tmp);
         if (tmp == "extern")
-            return m::make_unique<Token>(tok_extern, tmp);
-        return m::make_unique<Token>(tok_identifier, tmp);
+            return std::make_unique<Token>(tok_extern, tmp);
+        return std::make_unique<Token>(tok_identifier, tmp);
     }
     if (isdigit(src.peek()) || src.peek() == '.') {
         std::string num_str;
         do {
             num_str += src.get();
         } while (isdigit(src.peek()) || src.peek() == '.');
-        return m::make_unique<Token>(tok_number, num_str);
+        return std::make_unique<Token>(tok_number, num_str);
     }
     // ignore comment until eol
     if (src.peek() == '#') {
@@ -81,11 +78,11 @@ std::unique_ptr<Token> Parser::get_token() {
             return get_token();
     }
     if (src.eof())
-        return m::make_unique<Token>(tok_eof, "");
+        return std::make_unique<Token>(tok_eof, "");
 
     // TODO unknown token should be errors ??
     char _ignore = src.get();
-    return m::make_unique<Token>(_ignore, std::string(1, _ignore));
+    return std::make_unique<Token>(_ignore, std::string(1, _ignore));
 }
 
 int Parser::next_token() {
@@ -96,7 +93,7 @@ int Parser::next_token() {
 /// numerexpr ::= number
 std::unique_ptr<ExprAST> Parser::parse_num_expr() {
     auto num_val = strtod(cur_token->lexeme.c_str(), 0);
-    auto res = m::make_unique<NumberExprAST>(num_val);
+    auto res = std::make_unique<NumberExprAST>(num_val);
     next_token(); // consume it
     return std::move(res);
 }
@@ -104,11 +101,11 @@ std::unique_ptr<ExprAST> Parser::parse_num_expr() {
 std::unique_ptr<ExprAST> Parser::parse_paren_expr() {
     next_token(); // eat (
     auto e = parse_expr();
-    if (!e)
+    if (!e) // parse_expr should log an error
         return nullptr;
 
     if(cur_token->type != ')')
-        return err::log_errorE("expected ')'");
+        return err::parse_errorE("expected ')'");
     next_token(); // eat )
     return e;
 }
@@ -119,8 +116,9 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
     std::string id_name = cur_token->lexeme;
 
     next_token(); // eat identifier
-    if (cur_token->type != '(')
-        return m::make_unique<VariableExprAST>(id_name);
+    if (cur_token->type != '(') {
+        return std::make_unique<VariableExprAST>(id_name);
+    }
 
     // call
     next_token();
@@ -142,7 +140,7 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
     // eat the ')'
     next_token();
 
-    return m::make_unique<CallExprAST> (id_name, std::move(args));
+    return std::make_unique<CallExprAST> (id_name, std::move(args));
 }
 
 /// primary
@@ -176,7 +174,7 @@ int Parser::get_token_prec(const Token *tok) {
 /// binoprhs
 ///    ::= ('+' primary)*
 std::unique_ptr<ExprAST> Parser::parse_binop_rhs(int expr_prec
-                                                 , std::unique_ptr<ExprAST> lhs) {
+                                                , std::unique_ptr<ExprAST> lhs) {
     while (1) {
         int tprec = get_token_prec(cur_token.get());
         // if binop binds at least as tightly as the current binop,
@@ -202,7 +200,7 @@ std::unique_ptr<ExprAST> Parser::parse_binop_rhs(int expr_prec
                 return nullptr;
         }
         // merge sides
-        lhs = m::make_unique<BinaryExprAST>(binop
+        lhs = std::make_unique<BinaryExprAST>(binop
                                             , std::move(lhs)
                                             , std::move(rhs));
     }
@@ -238,7 +236,7 @@ std::unique_ptr<PrototypeAST> Parser::parse_prototype() {
     // success
     next_token();
 
-    return m::make_unique<PrototypeAST>(fn_name, std::move(arg_names));
+    return std::make_unique<PrototypeAST>(fn_name, std::move(arg_names));
 }
 
 /// definition ::= 'def' prototype expression
@@ -249,21 +247,43 @@ std::unique_ptr<FunctionAST> Parser::parse_definition() {
         return nullptr;
 
     if (auto e = parse_expr())
-        return m::make_unique<FunctionAST>(std::move(proto), std::move(e));
+        return std::make_unique<FunctionAST>(std::move(proto), std::move(e));
     return nullptr;
 }
 
 /// external ::= 'extern' protoype
 std::unique_ptr<PrototypeAST> Parser::parse_extern() {
     next_token();
-    return parse_prototype();
+    if (auto r = parse_prototype()) {
+        r->ext(true);
+        return r;
+    }
+    return nullptr;
 }
 
 /// toplevelexpr ::= expression
 std::unique_ptr<FunctionAST> Parser::parse_tle() {
     if (auto e = parse_expr()) {
-        auto proto = m::make_unique<PrototypeAST>("", std::vector<std::string>());
-        return m::make_unique<FunctionAST>(std::move(proto), std::move(e));
+        auto proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+        return std::make_unique<FunctionAST>(std::move(proto), std::move(e));
     }
     return nullptr;
+}
+
+namespace err {
+void parse_error(const char*place, const char*error) {
+  fprintf(stderr, "parse error: %s in %s", error, place);
+}
+std::unique_ptr<ExprAST> parse_errorE(const char *str) {
+  parse_error(str);
+  return nullptr;
+}
+std::unique_ptr<PrototypeAST> parse_errorP(const char *str) {
+  parse_error(str);
+  return nullptr;
+}
+std::unique_ptr<FunctionAST> parse_errorF(const char *str) {
+  parse_error(str);
+  return nullptr
+}
 }

@@ -19,7 +19,6 @@ enum token_t {
     tok_number = -5,
     // TODO
     tok_op = -6
-    // tok_comma // for func args?
 };
 
 /// TEMP
@@ -34,6 +33,8 @@ struct Token {
     // TODO token_t token_type
     Token(int token_type, std::string lexeme)
         : type(token_type), lexeme(lexeme) {}
+
+    std::string to_string();
 };
 
 class Parser {
@@ -68,7 +69,7 @@ public:
     std::unique_ptr<PrototypeAST> parse_prototype();
     /// definition ::= 'def' prototype expression
     std::unique_ptr<FunctionAST> parse_definition();
-    /// external ::= 'extern' protoype
+    /// external ::= 'extern' protoype ';'
     std::unique_ptr<PrototypeAST> parse_extern();
     /// toplevelexpr ::= expression
     std::unique_ptr<FunctionAST> parse_tle();
@@ -76,5 +77,13 @@ public:
     /// TEMP
     std::string to_string();
 };
+
+namespace err {
+void err::parse_error(const char*place, const char*error);
+
+std::unique_ptr<ExprAST> err::parse_errorE(const char *str);
+std::unique_ptr<PrototypeAST> err::parse_errorP(const char *str);
+std::unique_ptr<FunctionAST> err::parse_errorF(const char *str);
+} // namespace err
 
 #endif //PARSER_H

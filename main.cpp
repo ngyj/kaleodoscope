@@ -1,13 +1,25 @@
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
+
 #include <sstream>
 #include <iostream>
 
 #include "parser.hpp"
-
-namespace m = std;
+#include "print_visitor.hpp"
 
 llvm::LLVMContext ctx;
 std::unique_ptr<llvm::Module> module;
 
+/*
 void handleDef(Parser& p){
     if (auto fnAST = p.parse_definition()) {
         if (auto *fnIR = fnAST->codegen()) {
@@ -33,7 +45,7 @@ void handleExt(Parser& p){
 void handleTLE(Parser& p){
     if (auto fnAST = p.parse_tle()) {
         if(auto *fnIR = fnAST->codegen()) {
-            aut H = jit->addModule(std::move(module));
+            auto H = jit->addModule(std::move(module));
             init_module_pm();
 
             auto expr_sym = jit->findSymbol("__anon_expr");
@@ -50,56 +62,44 @@ void handleTLE(Parser& p){
         p.next_token();
     }
 }
+*/
 
 void loop(Parser& p) {
-    while(true) {
+    auto printer = PrintVisitor();
+    for (;;) {
         switch(p.next_token()) {
         case tok_eof:
             return;
         case ';': // ignore
             p.next_token();
             break;
-        case tok_def:
-            handleDef(p);
-            break;
-        case tok_extern:
-            handleExt(p);
-            break;
-        default:
-            handleTLE(p);
+        case tok_def: {
+            p.parse_definition()->accept(printer);
             break;
         }
+        case tok_extern: {
+            p.parse_extern()->accept(printer);
+            break;
+        }
+        default: {
+          p.parse_expr()->accept(printer);
+          break;
+        }
+        }
+        std::cout << std::endl;
     }
-}
-void init_module_passman() {
-    module = m::make_unique<llvm::Module>("my jit", ctx);
-    fpm = llvm::make_unique<FunctionPassManager>(module.get());
-
-    //
 }
 
 void parse_in(std::istream& src) {
     auto p = Parser(src);
     loop(p);
+    std::cout << std::flush;
     fprintf(stderr, "\n--------\n");
-    module->print(llvm::errs(), nullptr);
-}
-
-void init_module_pm() {
-    module = m:make_unique<llvm::Module>("my jit", ctx);
-    module->setDataLayou(jit->getTargetMachine().createDataLayout());
-
-    fpm = m::make_unique<llvm::FunctionPassManager>(module.get());
-
-    fpm->add(createInstructionCombiningPass());
-    fpm->add(createReassociatePass());
-    fpm->add(createGVNPass());
-    fpm->add(createCFGSimplificationPass());
-    fpm->doInitialization();
+    // module->print(llvm::errs(), nullptr);
 }
 
 void repl() {
-    while (1) {
+    for (;;) {
         if (std::cin.eof()) {
             std::cout << std::endl << "Leaving." << std::endl;
             std::cout.flush();
@@ -117,5 +117,5 @@ void repl() {
 }
 
 int main() {
-    repl();
+  repl();
 }

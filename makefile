@@ -10,13 +10,15 @@ all: kaleodoscope
 
 clean :
 	rm *.o
-	rm main
+	rm kaleodoscope
 
 ast.o : ast.hpp ast.cpp
 
 parser.o : parser.cpp parser.hpp ast.hpp
 
-main.o : main.cpp parser.hpp
+print_visitor.o: print_visitor.cpp ast.hpp print_visitor.hpp
 
-kaleodoscope: ast.o parser.o main.o
+main.o : main.cpp print_visitor.hpp parser.hpp ast.hpp print_visitor.hpp
+
+kaleodoscope: ast.o parser.o print_visitor.o main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
