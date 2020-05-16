@@ -6,11 +6,11 @@ CXXFLAGS = -O2 -Wextra -g $(LLVM) -std=c++17 \
 
 .PHONY : all
 
-all: kaleodoscope
+all: mangekyou
 
 clean :
 	rm *.o
-	rm kaleodoscope
+	rm mangekyou
 
 ast.o : ast.hpp ast.cpp
 
@@ -20,5 +20,5 @@ print_visitor.o: print_visitor.cpp ast.hpp print_visitor.hpp
 
 main.o : main.cpp print_visitor.hpp parser.hpp ast.hpp print_visitor.hpp
 
-kaleodoscope: ast.o parser.o print_visitor.o main.o
+mangekyou: ast.o parser.o print_visitor.o main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
