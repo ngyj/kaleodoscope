@@ -1,7 +1,7 @@
-#include <iostream>
-#include <vector>
 #include <algorithm> // std::transform
 #include <cassert>
+#include <iostream>
+#include <vector>
 
 #include "ast.hpp"
 #include "print_visitor.hpp"
@@ -24,57 +24,55 @@ void PrintVisitor::visitVariable(VariableExprAST * e) {
 
 void PrintVisitor::visitBinary(BinaryExprAST * e) {
   assert(e);
-  if (bin_depth++)
-    out << '(';
+  out << '(' << e->op() << ' ';
   e->lhs()->accept(*this);
-  out << ' ' << e->op() << ' ';
+  out << ' ';
   e->rhs()->accept(*this);
-  if (--bin_depth)
-    out << ')';
+  out << ')';
 }
 
 void PrintVisitor::visitCall(CallExprAST * e) {
   assert(e);
-  out << e->callee();
   out << '(';
-  int i = 0;
-  for(auto it : e->args()) {
-    if (i++)
-      out << ", ";
-    it->accept(*this);
+  out << e->callee();
+  auto args = e->args();
+  auto it = args.begin();
+  while(it != args.end()) {
+    out << ' ';
+    (*it)->accept(*this);
+    it++;
   }
   out << ')';
 }
 
 void PrintVisitor::visitFunction(FunctionAST* f) {
   assert(f);
-  out << "def ";
+  if (f->proto()->ext())
+    out << "(extern";
+  else
+    out << "(def ";
   f->proto()->accept(*this);
   indent++;
   newline();
   f->body()->accept(*this);
   indent--;
+  out << ')' << std::flush;
 }
 
 void PrintVisitor::visitPrototype(PrototypeAST * p) {
   assert(p);
-  if (p->ext())
-    out << "extern ";
-  out << p->name();
+  out << '(' << p->name();
 
-  out << '(';
-  int i = 0;
-  for(auto& arg : p->args()) {
-    if (i++)
-      out << ", ";
-    out << arg;
+  auto pars = p->args();
+  auto it = pars.begin();
+  while(it != pars.end()) {
+    out << ' ' << *it;
+    it++;
   }
   out << ')';
-  if (p->ext())
-    out << ";";
 }
 
 void PrintVisitor::newline() {
   std::cout << '\n';
-  std::cout << std::string(' ', indent);
+  std::cout << std::string(indent, ' ');
 }

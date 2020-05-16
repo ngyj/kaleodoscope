@@ -17,24 +17,9 @@ namespace err {
 void log_error(const char *str) {
   fprintf(stderr, "logerror: %s\n", str);
 }
-void parse_error(const char*place, const char*error) {
-  fprintf(stderr, "parse error: %s in %s", error, place);
-}
 Value *log_errorV(const char *str) {
   log_error(str);
   return nullptr;
-}
-std::unique_ptr<ExprAST> parse_errorE(const char *str) {
-  parse_error(str);
-  return nullptr;
-}
-std::unique_ptr<PrototypeAST> parse_errorP(const char *str) {
-  parse_error(str);
-  return nullptr;
-}
-std::unique_ptr<FunctionAST> parse_errorF(const char *str) {
-  parse_error(str);
-  return nullptr
 }
 }
 

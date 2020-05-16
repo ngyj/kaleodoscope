@@ -3,7 +3,10 @@
 #include <map>
 #include <iostream>
 
+#include "utils.hpp"
 #include "parser.hpp"
+#include "ast.hpp"
+
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -38,16 +41,29 @@ std::string Token::to_string() {
     }
 }
 
+// handle unbreakable space
+bool is_space(std::istream& src) {
+  if (isspace(src.peek()))
+    return true;
+  if (src.peek() != 0xc2)
+    return false;
+  src.get();
+  if (src.peek() == 0xa0)
+    return true;
+  src.unget();
+  return false;
+}
 
-Parser::Parser(std::istream& src)
-    : src(src), cur_line(0) {
+
+Parser::Parser(const std::string& filename, std::istream& src)
+    : src(src), cur_line(0), fn(filename) {
     cur_token = nullptr;
     binop_prec = {{'<', 10}, {'+', 20}, {'-', 20}, {'*', 40}};
 };
 
 std::unique_ptr<Token> Parser::get_token() {
-    while (isspace(src.peek()))
-        src.get();
+    while (is_space(src))
+      src.get();
 
     if (isalpha(src.peek())) {
         std::string tmp;
@@ -133,7 +149,7 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
             if (cur_token->type == ')')
                 break;
             if (cur_token->type != ',')
-                return err::log_errorE("Excpected ')' or ',' in argument list");
+                return err::parse_errorE("Excpected ')' or ',' in argument list");
             next_token();
         }
     }
@@ -150,7 +166,8 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
 std::unique_ptr<ExprAST> Parser::parse_primary() {
     switch (cur_token->type) {
     default:
-        return err::log_errorE("unknown token when expecting an expression");
+      return err::parse_errorE(format("unknown token (%d) when expecting an expression"
+                                     , cur_token->type).c_str());
     case tok_identifier:
         return parse_id_expr();
     case tok_number:
@@ -219,19 +236,19 @@ std::unique_ptr<ExprAST> Parser::parse_expr() {
 ///   ::= id '(' id* ')'
 std::unique_ptr<PrototypeAST> Parser::parse_prototype() {
     if (cur_token->type != tok_identifier)
-        return err::log_errorP("Excpected function name in the prototype");
+        return err::parse_errorP("Excpected function name in the prototype");
 
     std::string fn_name = cur_token->lexeme;
     next_token();
 
     if (cur_token->type != '(')
-        return err::log_errorP("Expected '(' in protoype");
+        return err::parse_errorP("Expected '(' in protoype");
 
     std::vector<std::string> arg_names;
     while (next_token() == tok_identifier)
         arg_names.push_back(cur_token->lexeme);
     if (cur_token->type != ')')
-        return err::log_errorP("Expected ')' in prototype");
+        return err::parse_errorP("Expected ')' in prototype");
 
     // success
     next_token();
@@ -274,16 +291,17 @@ namespace err {
 void parse_error(const char*place, const char*error) {
   fprintf(stderr, "parse error: %s in %s", error, place);
 }
+
 std::unique_ptr<ExprAST> parse_errorE(const char *str) {
-  parse_error(str);
+  parse_error("<unknown>", str);
   return nullptr;
 }
 std::unique_ptr<PrototypeAST> parse_errorP(const char *str) {
-  parse_error(str);
+  parse_error("<unknown>", str);
   return nullptr;
 }
 std::unique_ptr<FunctionAST> parse_errorF(const char *str) {
-  parse_error(str);
-  return nullptr
+  parse_error("<unknown>", str);
+  return nullptr;
 }
 }
