@@ -44,7 +44,11 @@ class Parser {
     std::map<char, int> binop_prec;
 
 public:
-    Parser(std::istream& src);
+    std::string fn;
+
+    Parser(std::istream& src) : Parser("", src) {}
+    Parser(const std::string& filename, std::istream& src);
+
     std::unique_ptr<Token> get_token();
     int next_token();
     int get_token_prec(const Token *tok);

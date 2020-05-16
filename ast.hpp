@@ -16,6 +16,18 @@ using llvm::Function;
 extern llvm::LLVMContext ctx;
 extern std::unique_ptr<llvm::Module> module;
 
+struct Span {
+  std::string filename;
+  int line, begin, end;
+
+  Span(std::string filename, int line)
+    : Span(filename, line, -1, -1) {}
+  Span(std::string filename, int begin, int line)
+    : Span(filename, line, begin, -1) {}
+  Span(std::string filename, int line, int begin, int end)
+    : filename(filename), line(line), begin(begin), end(end) {}
+};
+
 class ASTVisitor;
 
 // --- the AST ---
