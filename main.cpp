@@ -19,51 +19,6 @@
 llvm::LLVMContext ctx;
 std::unique_ptr<llvm::Module> module;
 
-/*
-void handleDef(Parser& p){
-    if (auto fnAST = p.parse_definition()) {
-        if (auto *fnIR = fnAST->codegen()) {
-            fprintf(stderr, "{{{ def");
-            fnIR->print(llvm::errs());
-            fprintf(stderr, "}}}\n");
-        }
-    } else {
-        p.next_token();
-    }
-}
-void handleExt(Parser& p){
-    if (auto protoAST = p.parse_extern()) {
-        if (auto *fnIR = protoAST->codegen()) {
-            fprintf(stderr, "{{{ extern");
-            fnIR->print(llvm::errs());
-            fprintf(stderr, "}}}\n");
-        }
-    } else {
-        p.next_token();
-    }
-}
-void handleTLE(Parser& p){
-    if (auto fnAST = p.parse_tle()) {
-        if(auto *fnIR = fnAST->codegen()) {
-            auto H = jit->addModule(std::move(module));
-            init_module_pm();
-
-            auto expr_sym = jit->findSymbol("__anon_expr");
-            assert(expr_sym && "Function not found");
-
-
-            double (*FP)() = (double (*)())(intptr_t)expr_sym.getAddress();
-
-            fprintf(stderr, "{{{ tle");
-            fnIR->print(llvm::errs());
-            fprintf(stderr, "}}}\n");
-        }
-    } else {
-        p.next_token();
-    }
-}
-*/
-
 void loop(Parser& p) {
     auto printer = PrintVisitor();
     for (;;) {
@@ -73,8 +28,8 @@ void loop(Parser& p) {
         case ';': // ignore
             p.next_token();
             break;
-        case tok_def: {
-            p.parse_definition()->accept(printer);
+        case tok_fn: {
+            p.parse_function()->accept(printer);
             break;
         }
         case tok_extern: {

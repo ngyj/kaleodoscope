@@ -2,14 +2,15 @@
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <cstdlib> // abort
 
 #include "ast.hpp"
 #include "print_visitor.hpp"
 
 
 void PrintVisitor::visit(ExprAST* e) {
-  std::cout << "fuck!";
-  return;
+  std::cerr << "fuck!";
+  std::abort();
 }
 
 void PrintVisitor::visitNumber(NumberExprAST * e) {
@@ -70,6 +71,16 @@ void PrintVisitor::visitPrototype(PrototypeAST * p) {
     it++;
   }
   out << ')';
+}
+
+void PrintVisitor::visitModule(ModuleAST* m) {
+  std::cerr << "not implemented yet!!";
+  std::abort();
+}
+
+void PrintVisitor::visitStmt(StmtAST* s) {
+  std::cerr << "fuck!!";
+  std::abort();
 }
 
 void PrintVisitor::newline() {

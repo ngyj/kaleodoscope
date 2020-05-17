@@ -155,3 +155,5 @@ void BinaryExprAST::accept(ASTVisitor& v) { return v.visitBinary(this); }
 void CallExprAST::accept(ASTVisitor& v) { return v.visitCall(this); }
 void PrototypeAST::accept(ASTVisitor& v) { return v.visitPrototype(this); }
 void FunctionAST::accept(ASTVisitor& v) { return v.visitFunction(this); }
+void ModuleAST::accept(ASTVisitor& v) { return v.visitModule(this); }
+void StmtAST::accept(ASTVisitor& v) { return v.visitStmt(this); }

@@ -14,9 +14,9 @@
 std::string tok_to_string(int token) {
     switch (token) {
     case tok_eof:
-        return "<END>";
-    case tok_def:
-        return "tok_def";
+        return "<EOF>";
+    case tok_fn:
+        return "tok_fn";
     case tok_extern:
         return "tok_extern";
     case tok_identifier:
@@ -33,11 +33,11 @@ std::string tok_to_string(int token) {
 std::string Token::to_string() {
     switch (type) {
     case tok_eof:
-    case tok_def:
+    case tok_fn:
     case tok_extern:
         return tok_to_string(type);
     default:
-        return tok_to_string(type) +": \""+ lexeme +"\"";
+        return "\""+ lexeme +"\"";
     }
 }
 
@@ -54,51 +54,70 @@ bool is_space(std::istream& src) {
   return false;
 }
 
-
+/// ctor
 Parser::Parser(const std::string& filename, std::istream& src)
-    : src(src), cur_line(0), fn(filename) {
+    : src(src), span(Span(filename, 0, 0, -1)) {
     cur_token = nullptr;
     binop_prec = {{'<', 10}, {'+', 20}, {'-', 20}, {'*', 40}};
 };
 
+/// wrapper around src.get() to update Span
+int Parser::getc() {
+  auto c = src.get();
+  if (c == '\n') {
+    span.newline();
+  }
+  span.next();
+  return c;
+}
+
 std::unique_ptr<Token> Parser::get_token() {
-    while (is_space(src))
-      src.get();
+    while (is_space(src)) {
+      getc();
+    }
 
     if (isalpha(src.peek())) {
         std::string tmp;
-        tmp = src.get();
+        int beg = span.begin;
+        tmp = getc();
         while (isalnum(src.peek()))
-            tmp += src.get();
+            tmp += getc();
 
-        if (tmp == "def")
-            return std::make_unique<Token>(tok_def, tmp);
+        auto s = span.mkfrom(beg);
+
+        if (tmp == "")
+            return std::make_unique<Token>(tok_fn, tmp, s);
         if (tmp == "extern")
-            return std::make_unique<Token>(tok_extern, tmp);
-        return std::make_unique<Token>(tok_identifier, tmp);
+            return std::make_unique<Token>(tok_extern, tmp, s);
+        return std::make_unique<Token>(tok_identifier, tmp, s);
     }
     if (isdigit(src.peek()) || src.peek() == '.') {
         std::string num_str;
+        int beg = span.begin + 1;
         do {
-            num_str += src.get();
+            num_str += getc();
         } while (isdigit(src.peek()) || src.peek() == '.');
-        return std::make_unique<Token>(tok_number, num_str);
+        return std::make_unique<Token>(tok_number, num_str, span.mkfrom(beg));
     }
     // ignore comment until eol
     if (src.peek() == '#') {
         char tmp;
         do {
-            tmp = src.get();
+            tmp = getc();
         } while (tmp != EOF && tmp != '\n' && tmp != '\r');
         if (tmp != EOF)
             return get_token();
     }
-    if (src.eof())
-        return std::make_unique<Token>(tok_eof, "");
+    if (src.eof()) {
+        span.end = span.begin;
+        span.begin = 0;
+        return std::make_unique<Token>(tok_eof, "", span);
+    }
 
     // TODO unknown token should be errors ??
-    char _ignore = src.get();
-    return std::make_unique<Token>(_ignore, std::string(1, _ignore));
+    char _ignore = getc();
+    auto s = span.mkfrom(span.begin - 1);
+    return std::make_unique<Token>(_ignore, std::string(1, _ignore), s);
 }
 
 int Parser::next_token() {
@@ -109,7 +128,7 @@ int Parser::next_token() {
 /// numerexpr ::= number
 std::unique_ptr<ExprAST> Parser::parse_num_expr() {
     auto num_val = strtod(cur_token->lexeme.c_str(), 0);
-    auto res = std::make_unique<NumberExprAST>(num_val);
+    auto res = std::make_unique<NumberExprAST>(num_val, cur_token->span);
     next_token(); // consume it
     return std::move(res);
 }
@@ -117,7 +136,7 @@ std::unique_ptr<ExprAST> Parser::parse_num_expr() {
 std::unique_ptr<ExprAST> Parser::parse_paren_expr() {
     next_token(); // eat (
     auto e = parse_expr();
-    if (!e) // parse_expr should log an error
+    if (!e) // parse_expr should have logged the error
         return nullptr;
 
     if(cur_token->type != ')')
@@ -133,10 +152,11 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
 
     next_token(); // eat identifier
     if (cur_token->type != '(') {
-        return std::make_unique<VariableExprAST>(id_name);
+        return std::make_unique<VariableExprAST>(id_name, cur_token->span);
     }
 
     // call
+    auto beg = cur_token->span;
     next_token();
     std::vector<std::unique_ptr<ExprAST>> args;
     if (cur_token->type != ')') {
@@ -156,7 +176,7 @@ std::unique_ptr<ExprAST> Parser::parse_id_expr() {
     // eat the ')'
     next_token();
 
-    return std::make_unique<CallExprAST> (id_name, std::move(args));
+    return std::make_unique<CallExprAST>(id_name, std::move(args), cur_token->span.rangeFrom(beg));
 }
 
 /// primary
@@ -216,10 +236,12 @@ std::unique_ptr<ExprAST> Parser::parse_binop_rhs(int expr_prec
             if (!rhs)
                 return nullptr;
         }
+        auto s = lhs->span;
         // merge sides
-        lhs = std::make_unique<BinaryExprAST>(binop
-                                            , std::move(lhs)
-                                            , std::move(rhs));
+        lhs = std::make_unique<BinaryExprAST>( binop
+                                             , std::move(lhs)
+                                             , std::move(rhs)
+                                             , s);
     }
 }
 
@@ -256,8 +278,8 @@ std::unique_ptr<PrototypeAST> Parser::parse_prototype() {
     return std::make_unique<PrototypeAST>(fn_name, std::move(arg_names));
 }
 
-/// definition ::= 'def' prototype expression
-std::unique_ptr<FunctionAST> Parser::parse_definition() {
+/// function ::= 'fn' prototype expression
+std::unique_ptr<FunctionAST> Parser::parse_function() {
     next_token();
     auto proto = parse_prototype();
     if (!proto)

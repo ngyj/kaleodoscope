@@ -11,14 +11,8 @@ public:
   int bin_depth;
   std::ostream& out;
 
-  // using ASTVisitor<void>::visit;
-  //using ASTVisitor<void>::visitNumber;
-  //using ASTVisitor<void>::visitVariable;
-  //using ASTVisitor<void>::visitCall;
-  //using ASTVisitor<void>::visitBinary;
-  //using ASTVisitor<void>::visitFunction;
-  //using ASTVisitor<void>::visitPrototype;
-
+  PrintVisitor(std::ostream& o = std::cout, int start_indent = 0)
+    : indent(start_indent), bin_depth(0), out(o) {}
 
   virtual void visit(ExprAST* e);
   virtual void visitNumber(NumberExprAST * e);
@@ -27,9 +21,8 @@ public:
   virtual void visitCall(CallExprAST * e);
   virtual void visitFunction(FunctionAST* f);
   virtual void visitPrototype(PrototypeAST * p);
+  virtual void visitModule(ModuleAST* m);
+  virtual void visitStmt(StmtAST* s);
+
   void newline();
-
-  PrintVisitor(std::ostream& o = std::cout, int start_indent = 0)
-    : indent(start_indent), bin_depth(0), out(o) {}
-
 };
