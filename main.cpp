@@ -10,67 +10,77 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
-#include "parser.hpp"
-#include "print_visitor.hpp"
+#include "syntax/parser.hpp"
+#include "utils/print_visitor.hpp"
 
 llvm::LLVMContext ctx;
 std::unique_ptr<llvm::Module> module;
 
-void loop(Parser& p) {
-    auto printer = PrintVisitor();
-    for (;;) {
-        switch(p.next_token()) {
-        case tok_eof:
-            return;
-        case ';': // ignore
-            p.next_token();
-            break;
-        case tok_fn: {
-            p.parse_function()->accept(printer);
-            break;
-        }
-        case tok_extern: {
-            p.parse_extern()->accept(printer);
-            break;
-        }
-        default: {
-          p.parse_expr()->accept(printer);
-          break;
-        }
-        }
-        std::cout << std::endl;
+// @TODO instead of looping like a virgin like this, just implement a collection
+// of statements parser
+void loop(Parser::Parser& p) {
+  using namespace Parser;
+  auto printer = PrintVisitor();
+  for (;;) {
+    switch (p.next_token()) {
+    case tok_eof:
+      return;
+    case ';': // ignore
+      p.next_token();
+      break;
+    case tok_fn: {
+      if (auto f = p.parse_function())
+        f->accept(printer);
+      else
+        return;
+      break;
     }
+    case tok_extern: {
+      if (auto e = p.parse_extern())
+        e->accept(printer);
+      else
+        return;
+      break;
+    }
+    default: {
+      if (auto e = p.parse_expr())
+        e->accept(printer);
+      else
+        return;
+      break;
+    }
+    }
+    std::cout << '\n' << std::flush;
+  }
 }
 
 void parse_in(std::istream& src) {
-    auto p = Parser(src);
-    loop(p);
-    std::cout << std::flush;
-    fprintf(stderr, "\n--------\n");
-    // module->print(llvm::errs(), nullptr);
+  auto p = Parser::Parser(src);
+  loop(p);
+  std::cout << std::flush;
+  fprintf(stderr, "\n--------\n");
+  // module->print(llvm::errs(), nullptr);
 }
 
 void repl() {
-    for (;;) {
-        if (std::cin.eof()) {
-            std::cout << std::endl << "Leaving." << std::endl;
-            std::cout.flush();
-            return;
-        }
-        std::cout << "> ";
-        while(isspace(std::cin.peek()))
-            std::cin.get();
-
-        std::string str;
-        std::getline(std::cin, str);
-        auto ss = std::istringstream(str);
-        parse_in(ss);
+  for (;;) {
+    if (std::cin.eof()) {
+      std::cout << std::endl << "Leaving." << std::endl;
+      std::cout.flush();
+      return;
     }
+    std::cout << "> ";
+    while (isspace(std::cin.peek()))
+      std::cin.get();
+
+    std::string str;
+    std::getline(std::cin, str);
+    auto ss = std::istringstream(str);
+    parse_in(ss);
+  }
 }
 
-int main() {
-  repl();
-}
+int main() { repl(); }

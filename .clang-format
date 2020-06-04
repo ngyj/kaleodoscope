@@ -1,0 +1,19 @@
+# ---
+BasedOnStyle: LLVM
+IndentWidth: 2
+# ---
+Language: Cpp
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# GHC style
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeBinaryOperators: NonAssignment
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+AlignOperands: true
+AlignConsecutiveAssignments: true
+AlignAfterOpenBracket: Align
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakBeforeTernaryOperators: true
+# ---

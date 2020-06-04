@@ -1,29 +1,28 @@
 #include <algorithm> // std::transform
 #include <cassert>
+#include <cstdlib> // abort
 #include <iostream>
 #include <vector>
-#include <cstdlib> // abort
 
-#include "ast.hpp"
+#include "../syntax/ast.hpp"
 #include "print_visitor.hpp"
 
-
-void PrintVisitor::visit(ExprAST* e) {
+void PrintVisitor::visit(AST::Expr* e) {
   std::cerr << "fuck!";
   std::abort();
 }
 
-void PrintVisitor::visitNumber(NumberExprAST * e) {
+void PrintVisitor::visitNumber(AST::NumberExpr* e) {
   assert(e);
   out << e->val();
 }
 
-void PrintVisitor::visitVariable(VariableExprAST * e) {
+void PrintVisitor::visitVariable(AST::VariableExpr* e) {
   assert(e);
   out << e->name();
 }
 
-void PrintVisitor::visitBinary(BinaryExprAST * e) {
+void PrintVisitor::visitBinary(AST::BinaryExpr* e) {
   assert(e);
   out << '(' << e->op() << ' ';
   e->lhs()->accept(*this);
@@ -32,13 +31,13 @@ void PrintVisitor::visitBinary(BinaryExprAST * e) {
   out << ')';
 }
 
-void PrintVisitor::visitCall(CallExprAST * e) {
+void PrintVisitor::visitCall(AST::CallExpr* e) {
   assert(e);
   out << '(';
   out << e->callee();
   auto args = e->args();
-  auto it = args.begin();
-  while(it != args.end()) {
+  auto it   = args.begin();
+  while (it != args.end()) {
     out << ' ';
     (*it)->accept(*this);
     it++;
@@ -46,7 +45,7 @@ void PrintVisitor::visitCall(CallExprAST * e) {
   out << ')';
 }
 
-void PrintVisitor::visitFunction(FunctionAST* f) {
+void PrintVisitor::visitFunction(AST::Function* f) {
   assert(f);
   if (f->proto()->ext())
     out << "(extern";
@@ -60,25 +59,25 @@ void PrintVisitor::visitFunction(FunctionAST* f) {
   out << ')' << std::flush;
 }
 
-void PrintVisitor::visitPrototype(PrototypeAST * p) {
+void PrintVisitor::visitPrototype(AST::Prototype* p) {
   assert(p);
   out << '(' << p->name();
 
   auto pars = p->args();
-  auto it = pars.begin();
-  while(it != pars.end()) {
+  auto it   = pars.begin();
+  while (it != pars.end()) {
     out << ' ' << *it;
     it++;
   }
   out << ')';
 }
 
-void PrintVisitor::visitModule(ModuleAST* m) {
+void PrintVisitor::visitModule(AST::Module* m) {
   std::cerr << "not implemented yet!!";
   std::abort();
 }
 
-void PrintVisitor::visitStmt(StmtAST* s) {
+void PrintVisitor::visitStmt(AST::Stmt* s) {
   std::cerr << "fuck!!";
   std::abort();
 }

@@ -1,122 +1,117 @@
 #include <memory>
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Verifier.h"
 
 #include "ast.hpp"
 
-using llvm::Value;
-
-static llvm::IRBuilder<> builder(ctx);
-static std::map<std::string, Value *> named_vs;
-
+// static llvm::IRBuilder<> builder(ctx);
+// static std::map<std::string, llvm::Value*> named_vs;
 
 namespace err {
-void log_error(const char *str) {
-  fprintf(stderr, "logerror: %s\n", str);
-}
-Value *log_errorV(const char *str) {
+void log_error(const char* str) { fprintf(stderr, "logerror: %s\n", str); }
+llvm::Value* log_errorV(const char* str) {
   log_error(str);
   return nullptr;
 }
-}
+} // namespace err
 
-
-Value *NumberExprAST::codegen() {
+namespace AST {
+llvm::Value* NumberExpr::codegen() {
   // numeric constants represented with ConstantFP,
   // APFloat ~ "Arbitrary Precision floating point constants"
-  //return llvm::ConstantFP::get(ctx, llvm::APFloat(val));
+  // return llvm::ConstantFP::get(ctx, llvm::APFloat(val));
   return nullptr;
 }
 
-Value *VariableExprAST::codegen() {
-  //Value *v = named_vs[name];
-  //if (!v)
+llvm::Value* VariableExpr::codegen() {
+  // llvm::Value *v = named_vs[name];
+  // if (!v)
   //    err::log_errorV("unknown variable name");
-  //return v;
+  // return v;
   return nullptr;
 }
 
-Value *BinaryExprAST::codegen() {
-  //Value *l = lhs->codegen();
-  //Value *r = rhs->codegen();
-  //if(!l || !r)
+llvm::Value* BinaryExpr::codegen() {
+  // llvm::Value *l = lhs->codegen();
+  // llvm::Value *r = rhs->codegen();
+  // if(!l || !r)
   //    return nullptr;
 
-  //switch (op) {
-  //case '+':
+  // switch (op) {
+  // case '+':
   //    return builder.CreateFAdd(l, r, "addtmp");
-  //case '-':
+  // case '-':
   //    return builder.CreateFSub(l, r, "subtmp");
-  //case '*':
+  // case '*':
   //    return builder.CreateFMul(l, r, "multmp");
-  //case '<':
+  // case '<':
   //    // fcmp returns an `i1` => conversion needed to 0.0 or 1.0
   //    // uitofp takes a value and a fp type to cast to
   //    l = builder.CreateFCmpULT(l, r, "cmptmp");
   //    return builder.CreateUIToFP(l, llvm::Type::getDoubleTy(ctx)
   //                                , "booltmp");
-  //default:
+  // default:
   //    return err::log_errorV("invalid binary operator");
   //}
   return nullptr;
 }
 
-Value *CallExprAST::codegen() {
+llvm::Value* CallExpr::codegen() {
   //// lookup the name in global module table.
-  //llvm::Function *cf = module->getFunction(callee);
-  //if (!cf)
+  // llvm::Function *cf = module->getFunction(callee);
+  // if (!cf)
   //    return err::log_errorV("unknown function referenced");
 
   //// argument mismatch error.
-  //if (cf->arg_size() != args.size())
+  // if (cf->arg_size() != args.size())
   //    return err::log_errorV("incorrect # arguments passed");
 
-  //std::vector<Value *> vargs;
-  //for (size_t i = 0; i != args.size(); i++) {
+  // std::vector<llvm::Value *> vargs;
+  // for (size_t i = 0; i != args.size(); i++) {
   //    vargs.push_back(args[i]->codegen());
   //    if (!vargs.back())
   //        return nullptr;
   //}
 
-  //return builder.CreateCall(cf, vargs, "calltmp");
+  // return builder.CreateCall(cf, vargs, "calltmp");
   return nullptr;
 }
 
-llvm::Function *PrototypeAST::codegen() {
-  //using llvm::Type;
+llvm::Function* Prototype::codegen() {
+  // using llvm::Type;
   //// Make the function type
-  //std::vector<Type *> doubles(args.size(), Type::getDoubleTy(ctx));
+  // std::vector<Type *> doubles(args.size(), Type::getDoubleTy(ctx));
 
-  //llvm::FunctionType *fty =
+  // llvm::FunctionType *fty =
   //    llvm::FunctionType::get(Type::getDoubleTy(ctx), doubles, false);
 
-  //llvm::Function *f =
+  // llvm::Function *f =
   //    llvm::Function::Create(fty, llvm::Function::ExternalLinkage
   //                           , name, module.get());
 
   //// set name of funcs argument according to names given in protype
-  //unsigned idx = 0;
-  //for (auto &arg : f->args())
+  // unsigned idx = 0;
+  // for (auto &arg : f->args())
   //    arg.setName(args[idx++]);
 
-  //return f;
+  // return f;
   return nullptr;
 }
 
-llvm::Function *FunctionAST::codegen() {
+llvm::Function* Function::codegen() {
   // // check for existing function from previous 'extern' declaration
   // llvm::Function *f = module->getFunction(proto->get_name());
 
   // if(f) {
   //     if(f->arg_size() != proto->get_args().size())
   //         // FIXME function name, line number and shit in error
-  //         return (llvm::Function*) err::log_errorV("conflicting function declarations");
-  //     // if prior parsed proto has different arg names we need to rename them here
-  //     auto it = proto->get_args().begin();
-  //     for (auto &arg : f->args())
+  //         return (llvm::Function*) err::log_errorV("conflicting function
+  //         declarations");
+  //     // if prior parsed proto has different arg names we need to rename them
+  //     here auto it = proto->get_args().begin(); for (auto &arg : f->args())
   //         arg.setName(* it++);
 
   // } else {
@@ -136,7 +131,7 @@ llvm::Function *FunctionAST::codegen() {
   // for (auto &arg : f->args())
   //     named_vs[arg.getName()] = &arg;
 
-  // if (Value *retv = body->codegen()) {
+  // if (llvm::Value *retv = body->codegen()) {
   //     builder.CreateRet(retv);
 
   //     // validate generated code
@@ -148,12 +143,13 @@ llvm::Function *FunctionAST::codegen() {
   return nullptr;
 }
 
-void ExprAST::accept(ASTVisitor& v) { return v.visit(this); }
-void NumberExprAST::accept(ASTVisitor& v) { return v.visitNumber(this); }
-void VariableExprAST::accept(ASTVisitor& v) { return v.visitVariable(this); }
-void BinaryExprAST::accept(ASTVisitor& v) { return v.visitBinary(this); }
-void CallExprAST::accept(ASTVisitor& v) { return v.visitCall(this); }
-void PrototypeAST::accept(ASTVisitor& v) { return v.visitPrototype(this); }
-void FunctionAST::accept(ASTVisitor& v) { return v.visitFunction(this); }
-void ModuleAST::accept(ASTVisitor& v) { return v.visitModule(this); }
-void StmtAST::accept(ASTVisitor& v) { return v.visitStmt(this); }
+void Expr::accept(Visitor& v) { return v.visit(this); }
+void NumberExpr::accept(Visitor& v) { return v.visitNumber(this); }
+void VariableExpr::accept(Visitor& v) { return v.visitVariable(this); }
+void BinaryExpr::accept(Visitor& v) { return v.visitBinary(this); }
+void CallExpr::accept(Visitor& v) { return v.visitCall(this); }
+void Prototype::accept(Visitor& v) { return v.visitPrototype(this); }
+void Function::accept(Visitor& v) { return v.visitFunction(this); }
+void Module::accept(Visitor& v) { return v.visitModule(this); }
+void Stmt::accept(Visitor& v) { return v.visitStmt(this); }
+} // namespace AST

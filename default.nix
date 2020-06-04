@@ -6,7 +6,7 @@
 with pkgs;
 
 stdenvNoCC.mkDerivation {
-    name = "kaleo-${version}";
+    name = "mangekyou-${version}";
     inherit version;
     src = lib.cleanSource source;
     buildInputs = [ llvm_7 clang_7 makeWrapper ];
@@ -18,6 +18,6 @@ stdenvNoCC.mkDerivation {
 
     installPhase = ''
       mkdir -p $out
-      cp kaleodoscope $out/
+      cp mangekyou $out/
     '';
 }
