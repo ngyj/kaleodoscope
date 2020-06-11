@@ -11,10 +11,6 @@ namespace AST {
 using std::shared_ptr;
 using std::unique_ptr;
 
-// FIXME no more globals please
-extern llvm::LLVMContext ctx;
-extern std::unique_ptr<llvm::Module> module;
-
 struct Span {
   std::string filename;
   int line, endl, begin, end;
