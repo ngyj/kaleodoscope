@@ -1,14 +1,17 @@
 #include <iostream>
 #include <sstream>
 
+#include "code/codegen.hpp"
 #include "syntax/parser.hpp"
 #include "utils/print_visitor.hpp"
 
 // @TODO instead of looping like a virgin like this, just implement a collection
 // of statements parser
 void loop(Parser::Parser& p) {
+  llvm::LLVMContext ctx;
   using namespace Parser;
-  auto printer = PrintVisitor();
+  auto printer = Print_v();
+  auto gen     = Code::Codegen_v(ctx);
   for (;;) {
     switch (p.next_token()) {
     case tok_eof:
@@ -17,9 +20,16 @@ void loop(Parser::Parser& p) {
       p.next_token();
       break;
     case tok_fn: {
-      if (auto f = p.parse_function())
+      if (auto f = p.parse_function()) {
+        printf("AST:\n");
         f->accept(printer);
-      else
+        f->accept(gen);
+        if (auto c = gen.get_fun()) {
+          printf("\nCode:\n");
+          c->print(llvm::outs());
+          printf("\n");
+        }
+      } else
         return;
       break;
     }
@@ -31,9 +41,17 @@ void loop(Parser::Parser& p) {
       break;
     }
     default: {
-      if (auto e = p.parse_expr())
+      if (auto e = p.parse_expr()) {
+        printf("AST:  ");
         e->accept(printer);
-      else
+        e->accept(gen);
+        if (auto c = gen.get_val()) {
+          printf("\nCode:\n");
+          c->print(llvm::outs());
+          printf("\n");
+        }
+
+      } else
         return;
       break;
     }
@@ -46,8 +64,6 @@ void parse_in(std::istream& src) {
   auto p = Parser::Parser(src);
   loop(p);
   std::cout << std::flush;
-  fprintf(stderr, "\n--------\n");
-  // module->print(llvm::errs(), nullptr);
 }
 
 void repl() {

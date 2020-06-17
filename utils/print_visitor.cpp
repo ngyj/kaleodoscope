@@ -7,22 +7,22 @@
 #include "../syntax/ast.hpp"
 #include "print_visitor.hpp"
 
-void PrintVisitor::visit(AST::Expr* e) {
+void Print_v::visit(AST::Expr* e) {
   std::cerr << "fuck!";
   std::abort();
 }
 
-void PrintVisitor::visitNumber(AST::NumberExpr* e) {
+void Print_v::visitNumber(AST::NumberExpr* e) {
   assert(e);
   out << e->val();
 }
 
-void PrintVisitor::visitVariable(AST::VariableExpr* e) {
+void Print_v::visitVariable(AST::VariableExpr* e) {
   assert(e);
   out << e->name();
 }
 
-void PrintVisitor::visitBinary(AST::BinaryExpr* e) {
+void Print_v::visitBinary(AST::BinaryExpr* e) {
   assert(e);
   out << '(' << e->op() << ' ';
   e->lhs()->accept(*this);
@@ -31,7 +31,7 @@ void PrintVisitor::visitBinary(AST::BinaryExpr* e) {
   out << ')';
 }
 
-void PrintVisitor::visitCall(AST::CallExpr* e) {
+void Print_v::visitCall(AST::CallExpr* e) {
   assert(e);
   out << '(';
   out << e->callee();
@@ -45,7 +45,7 @@ void PrintVisitor::visitCall(AST::CallExpr* e) {
   out << ')';
 }
 
-void PrintVisitor::visitFunction(AST::Function* f) {
+void Print_v::visitFunction(AST::Function* f) {
   assert(f);
   if (f->proto()->ext())
     out << "(extern";
@@ -59,7 +59,7 @@ void PrintVisitor::visitFunction(AST::Function* f) {
   out << ')' << std::flush;
 }
 
-void PrintVisitor::visitPrototype(AST::Prototype* p) {
+void Print_v::visitPrototype(AST::Prototype* p) {
   assert(p);
   out << '(' << p->name();
 
@@ -72,17 +72,17 @@ void PrintVisitor::visitPrototype(AST::Prototype* p) {
   out << ')';
 }
 
-void PrintVisitor::visitModule(AST::Module* m) {
+void Print_v::visitModule(AST::Module* m) {
   std::cerr << "not implemented yet!!";
   std::abort();
 }
 
-void PrintVisitor::visitStmt(AST::Stmt* s) {
+void Print_v::visitStmt(AST::Stmt* s) {
   std::cerr << "fuck!!";
   std::abort();
 }
 
-void PrintVisitor::newline() {
+void Print_v::newline() {
   std::cout << '\n';
   std::cout << std::string(indent, ' ');
 }

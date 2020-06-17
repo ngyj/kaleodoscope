@@ -5,7 +5,7 @@
 
 #include "../syntax/ast.hpp"
 
-class PrintVisitor : public AST::Visitor {
+class Print_v : public AST::Visitor {
 public:
   int indent;
   int bin_depth;
@@ -22,7 +22,7 @@ public:
   virtual void visitStmt(AST::Stmt* s);
 
   void newline();
-  PrintVisitor(std::ostream& o = std::cout, int start_indent = 0)
+  Print_v(std::ostream& o = std::cout, int start_indent = 0)
       : indent(start_indent)
       , bin_depth(0)
       , out(o) {}

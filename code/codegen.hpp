@@ -2,6 +2,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/STLExtras.h>
@@ -32,7 +33,7 @@ struct Codegen_v : public AST::Visitor {
    */
   llvm::LLVMContext& ctx;
   unique_ptr<llvm::Module> module;
-  llvm::Value* cur_val;
+  std::variant<llvm::Function*, llvm::Value*> cur_var;
   llvm::IRBuilder<> builder;
   std::map<std::string, llvm::Value*> named_vs;
 
@@ -43,8 +44,19 @@ struct Codegen_v : public AST::Visitor {
   virtual void visitCall(AST::CallExpr*);
   virtual void visitPrototype(AST::Prototype*);
   virtual void visitFunction(AST::Function*);
-  virtual void visitModule(AST::Module*) {}
   virtual void visitStmt(AST::Stmt*) {}
+  virtual void visitModule(AST::Module*) {}
+
+  template <typename T>
+  T get_var() const {
+    return std::get<T>(cur_var);
+  }
+  llvm::Value* get_val() const { return get_var<llvm::Value*>(); }
+  llvm::Function* get_fun() const { return get_var<llvm::Function*>(); }
+  /* is cur_var null */
+  bool is_cur_null() const {
+    return std::visit([](auto* p) { return p == nullptr; }, cur_var);
+  }
 
   Codegen_v(llvm::LLVMContext& _ctx)
       : ctx(_ctx)
@@ -52,5 +64,11 @@ struct Codegen_v : public AST::Visitor {
       , named_vs(std::map<std::string, llvm::Value*>()) {
     module = std::make_unique<llvm::Module>("my module", ctx);
   }
+
+  /* assigns an new Module to module */
+  void newModule(const std::string& name) {
+    module = std::make_unique<llvm::Module>(name, ctx);
+  }
 };
+
 } // namespace Code
