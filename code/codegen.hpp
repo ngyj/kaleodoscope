@@ -23,7 +23,14 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 struct Codegen_v : public AST::Visitor {
-  llvm::LLVMContext ctx;
+  /* Note on & :
+   * Context is owning a Module. If you work with multiple modules and you
+   * intend to link them together, they need to be in the same context.
+   * Otherwise you can use a new context for every module. LLVM is thread-safe
+   * at the context level, which means that you cannot have multiple threads
+   * processing two modules that are in the same context.
+   */
+  llvm::LLVMContext& ctx;
   unique_ptr<llvm::Module> module;
   llvm::Value* cur_val;
   llvm::IRBuilder<> builder;
@@ -39,8 +46,9 @@ struct Codegen_v : public AST::Visitor {
   virtual void visitModule(AST::Module*) {}
   virtual void visitStmt(AST::Stmt*) {}
 
-  Codegen_v()
-      : builder(llvm::IRBuilder<>(ctx))
+  Codegen_v(llvm::LLVMContext& _ctx)
+      : ctx(_ctx)
+      , builder(llvm::IRBuilder<>(ctx))
       , named_vs(std::map<std::string, llvm::Value*>()) {
     module = std::make_unique<llvm::Module>("my module", ctx);
   }
