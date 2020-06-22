@@ -27,8 +27,10 @@ std::string tok_to_string(int token) {
     return "tok_number";
   case tok_op:
     return "tok_op";
+  case tok_let:
+    return "tok_let";
   default:
-    return "tok_*";
+    return std::string("tok_").append(1, token);
   }
 }
 /// TEMP
@@ -58,7 +60,8 @@ bool is_space(std::istream& src) {
 
 /// ctor
 Parser::Parser(const std::string& filename, std::istream& src)
-    : src(src)
+    : _buffer()
+    , src(src)
     , span(Span(filename, 0, 0, -1)) {
   cur_token  = nullptr;
   binop_prec = {{'<', 10}, {'+', 20}, {'-', 20}, {'*', 40}};
@@ -75,8 +78,21 @@ int Parser::getc() {
 }
 
 std::unique_ptr<Token> Parser::get_token() {
+  if (!_buffer.empty()) {
+    auto p = std::move(_buffer.front());
+    _buffer.pop_front();
+    return p;
+  }
+
   while (is_space(src)) {
     getc();
+  }
+
+  // branch prediction shouldn't mind this condition to be first
+  if (src.eof()) {
+    span.end   = span.begin;
+    span.begin = 0;
+    return std::make_unique<Token>(tok_eof, "", span);
   }
 
   if (isalpha(src.peek())) {
@@ -111,16 +127,25 @@ std::unique_ptr<Token> Parser::get_token() {
     if (tmp != EOF)
       return get_token();
   }
-  if (src.eof()) {
-    span.end   = span.begin;
-    span.begin = 0;
-    return std::make_unique<Token>(tok_eof, "", span);
-  }
 
   // TODO unknown token should be errors ??
   char _ignore = getc();
   auto s       = span.mkfrom(span.begin - 1);
   return std::make_unique<Token>(_ignore, std::string(1, _ignore), s);
+}
+
+/// @TODO peek_token(int n)
+int Parser::peek_token(size_t n) {
+  if (n < 1)
+    return cur_token->type;
+  if (n <= _buffer.size())
+    return _buffer[n - 1]->type;
+  size_t i = n - _buffer.size();
+  while (i > 0 && _buffer.back()->type != tok_eof) {
+    _buffer.push_back(get_token());
+    i--;
+  }
+  return _buffer.back()->type;
 }
 
 int Parser::next_token() {
@@ -149,17 +174,22 @@ std::unique_ptr<Expr> Parser::parse_paren_expr() {
 }
 
 /// identifierexpr ::= identifier
-///                ::= identifier '(' expression* ')'
-std::unique_ptr<Expr> Parser::parse_id_expr() {
+std::unique_ptr<VariableExpr> Parser::parse_id_expr() {
+  if (cur_token->type != tok_identifier)
+    return nullptr;
   std::string id_name = cur_token->lexeme;
 
   next_token(); // eat identifier
-  if (cur_token->type != '(') {
-    return std::make_unique<VariableExpr>(id_name, cur_token->span);
-  }
+  return std::make_unique<VariableExpr>(id_name, cur_token->span);
+}
 
+std::unique_ptr<CallExpr> Parser::parse_call_expr() {
+  auto id = parse_id_expr();
+  if (!id)
+    return nullptr;
+  std::string id_name = id->name();
   // call
-  auto beg = cur_token->span;
+  auto beg = id->span;
   next_token();
   std::vector<std::unique_ptr<Expr>> args;
   if (cur_token->type != ')') {
@@ -185,6 +215,7 @@ std::unique_ptr<Expr> Parser::parse_id_expr() {
 
 /// primary
 ///    ::= identifier_expr
+///    ::= call_expr
 ///    ::= number_expr
 ///    ::= paren_expr
 std::unique_ptr<Expr> Parser::parse_primary() {
@@ -194,8 +225,12 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         format("unknown token (%d) when expecting an expression",
                cur_token->type)
             .c_str());
-  case tok_identifier:
-    return parse_id_expr();
+  case tok_identifier: {
+    if (peek_token(1) == '(')
+      return parse_call_expr();
+    else
+      return parse_id_expr();
+  }
   case tok_number:
     return parse_num_expr();
   case '(':
@@ -267,21 +302,23 @@ std::vector<std::string> Parser::parse_params() {
   while (cur_token->type != ')') {
     if (cur_token->type == ',')
       next_token(); // eat the comma
+    else {
+      err::parse_error("<unknown>", "expected ','");
+      return {}; // @TODO return an actual error
+    }
 
     if (cur_token->type == tok_identifier) {
       arg_names.push_back(cur_token->lexeme);
     } else {
       err::parse_error("<unknown>", "parameter expected");
-      return {};
+      return {}; // @TODO return an actual error
     }
     next_token();
   }
   return arg_names;
 }
 
-/// protoype
-///   ::= id '(' ')'
-///   ::= id '(' id (,id*) ')'
+/// protoype ::= id '(' params? ')'
 std::unique_ptr<Prototype> Parser::parse_prototype() {
   if (cur_token->type != tok_identifier)
     return err::parse_errorP("Excpected function name in the prototype");
@@ -328,11 +365,42 @@ std::unique_ptr<Prototype> Parser::parse_extern() {
 /// toplevelexpr ::= expression
 std::unique_ptr<Function> Parser::parse_tle() {
   if (auto e = parse_expr()) {
-    auto proto = std::make_unique<Prototype>("", std::vector<std::string>());
+    auto proto =
+        std::make_unique<Prototype>("__auto__tle_", std::vector<std::string>());
     return std::make_unique<Function>(std::move(proto), std::move(e));
   }
   return nullptr;
 }
+
+/// 'let' id = expr;
+std::unique_ptr<Stmt> Parser::parse_assignment() {
+  if (cur_token->type != tok_let)
+    return nullptr; // @TODO error
+  next_token();     // eat 'let'
+
+  auto id = parse_id_expr();
+  if (!id)
+    return nullptr;
+  if (cur_token->type != '=')
+    return nullptr;
+  auto exp = parse_expr();
+  if (!exp)
+    return nullptr;
+  return nullptr;
+}
+
+// @TODO
+std::unique_ptr<Stmt> Parser::parse_stmt() {
+  switch (cur_token->type) {
+  case tok_let:
+    return parse_assignment();
+  case tok_identifier:
+    return parse_call_expr();
+  }
+}
+
+// @TODO
+std::unique_ptr<std::vector<Stmt>> Parser::parse_stmts() { return nullptr; }
 } // namespace Parser
 
 namespace err {

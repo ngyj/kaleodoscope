@@ -1,3 +1,4 @@
+#include <deque>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -20,11 +21,12 @@ enum token_t {
   // module
   tok_module = -6,
   // TODO
-  tok_op = -7
+  tok_let = -7,
+  tok_op  = -8
 };
 
 /// @TEMP
-std::string tok_to_string(token_t token);
+std::string tok_to_string(int token);
 
 /// Token datatype
 struct Token {
@@ -42,7 +44,9 @@ struct Token {
   std::string to_string();
 };
 
+/// @TODO error management: expect<T>? std::variant<Error, ASTNode> ?
 class Parser {
+  std::deque<std::unique_ptr<Token>> _buffer;
   std::istream& src;
   std::unique_ptr<Token> cur_token;
   std::map<char, int> binop_prec;
@@ -54,9 +58,16 @@ public:
       : Parser("", src) {}
   Parser(const std::string& filename, std::istream& src);
 
+  /// consumes a lexeme from src
   std::unique_ptr<Token> get_token();
+  /// () -> token_t
   int next_token();
+  /// returns type of nth next token, cur_token for n = 0
+  /// does not consume nor sets the cur_token
+  int peek_token(size_t n);
+  /// get the precedence of an operator
   int get_token_prec(const Token* tok);
+  /// get next character from src
   int getc();
 
   /// numberexpr ::= number
@@ -64,9 +75,11 @@ public:
   /// parenexpr ::= '(' expression ')'
   std::unique_ptr<Expr> parse_paren_expr();
   /// identifierexpr ::= identifier
-  ///                ::= identifier '(' expression* ')'
-  std::unique_ptr<Expr> parse_id_expr();
+  std::unique_ptr<VariableExpr> parse_id_expr();
+  /// callexpr ::= identifier '(' expression* ')'
+  std::unique_ptr<CallExpr> parse_call_expr();
   /// primary ::= identifier_expr
+  ///         ::= callexpr
   ///         ::= number_expr
   ///         ::= paren_expr
   std::unique_ptr<Expr> parse_primary();
@@ -85,6 +98,14 @@ public:
   std::unique_ptr<Prototype> parse_extern();
   /// toplevelexpr ::= expression
   std::unique_ptr<Function> parse_tle();
+  /// assignment ::= 'let' id '=' expr
+  std::unique_ptr<Stmt> parse_assignment();
+  /// statement ::= callexpr
+  ///           ::= assignment
+  std::unique_ptr<Stmt> parse_stmt();
+  /// statements ::= statement ';'?
+  ///            ::= statement ';' statements
+  std::unique_ptr<std::vector<Stmt>> parse_stmts();
   /// module ::= mheader ';' statements*
   std::unique_ptr<Module> parse_module();
   /// imports ::= '#module'

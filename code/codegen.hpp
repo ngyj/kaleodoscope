@@ -32,7 +32,8 @@ struct Codegen_v : public AST::Visitor {
    * processing two modules that are in the same context.
    */
   llvm::LLVMContext& ctx;
-  unique_ptr<llvm::Module> module;
+  llvm::LLVMContext* ctx_;
+  shared_ptr<llvm::Module> module;
   std::variant<llvm::Function*, llvm::Value*> cur_var;
   llvm::IRBuilder<> builder;
   std::map<std::string, llvm::Value*> named_vs;
@@ -65,9 +66,18 @@ struct Codegen_v : public AST::Visitor {
     module = std::make_unique<llvm::Module>("my module", ctx);
   }
 
-  /* assigns an new Module to module */
-  void newModule(const std::string& name) {
-    module = std::make_unique<llvm::Module>(name, ctx);
+  Codegen_v& with_module(const std::shared_ptr<llvm::Module>& mod) {
+    module = mod;
+    return *this;
+  }
+  Codegen_v& with_ctx(llvm::LLVMContext* ctx) {
+    this->ctx_ = ctx;
+    return *this;
+  }
+  /* assigns an new module */
+  Codegen_v new_module(const std::string& name) {
+    module = std::make_shared<llvm::Module>(name, ctx);
+    return *this;
   }
 };
 
