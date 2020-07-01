@@ -1,4 +1,5 @@
 #include <deque>
+#include <expected>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -9,6 +10,19 @@
 
 namespace Parser {
 using namespace AST;
+using namespace tl;
+using span_ptr = std::shared_ptr<Span>;
+
+struct Error {
+  std::string txt;
+
+  Error(std::string txt)
+      : txt(txt) {}
+  std::string to_string();
+  void log_error();
+};
+template <typename T>
+using parsed = expected<Error, T>;
 
 enum token_t {
   tok_eof = -1,
@@ -71,54 +85,59 @@ public:
   int getc();
 
   /// numberexpr ::= number
-  std::unique_ptr<Expr> parse_num_expr();
+  parsed<unique_ptr<Expr>> parse_num_expr();
   /// parenexpr ::= '(' expression ')'
-  std::unique_ptr<Expr> parse_paren_expr();
+  parsed<unique_ptr<Expr>> parse_paren_expr();
   /// identifierexpr ::= identifier
-  std::unique_ptr<VariableExpr> parse_id_expr();
+  parsed<unique_ptr<VariableExpr>> parse_id_expr();
   /// callexpr ::= identifier '(' expression* ')'
-  std::unique_ptr<CallExpr> parse_call_expr();
+  parsed<unique_ptr<CallExpr>> parse_call_expr();
   /// primary ::= identifier_expr
   ///         ::= callexpr
   ///         ::= number_expr
   ///         ::= paren_expr
-  std::unique_ptr<Expr> parse_primary();
+  parsed<unique_ptr<Expr>> parse_primary();
   /// binoprhs ::= ('+' primary)*
-  std::unique_ptr<Expr> parse_binop_rhs(int expr_prec,
-                                        std::unique_ptr<Expr> lhs);
+  parsed<unique_ptr<Expr>> parse_binop_rhs(int expr_prec,
+                                           std::unique_ptr<Expr> lhs);
   /// expression ::= primary binoprhs
-  std::unique_ptr<Expr> parse_expr();
+  parsed<unique_ptr<Expr>> parse_expr();
   /// params ::= id (, id)*
-  std::vector<std::string> parse_params();
+  parsed<std::vector<std::string>> parse_params();
   /// protoype ::= id '(' params? ')'
-  std::unique_ptr<Prototype> parse_prototype();
+  parsed<unique_ptr<Prototype>> parse_prototype();
   /// function ::= 'fn' prototype expression
-  std::unique_ptr<Function> parse_function();
+  parsed<unique_ptr<Function>> parse_function();
   /// external ::= 'extern' protoype ';'
-  std::unique_ptr<Prototype> parse_extern();
+  parsed<unique_ptr<Prototype>> parse_extern();
   /// toplevelexpr ::= expression
-  std::unique_ptr<Function> parse_tle();
+  parsed<unique_ptr<Function>> parse_tle();
   /// assignment ::= 'let' id '=' expr
-  std::unique_ptr<Stmt> parse_assignment();
+  parsed<unique_ptr<Stmt>> parse_assignment();
   /// statement ::= callexpr
   ///           ::= assignment
-  std::unique_ptr<Stmt> parse_stmt();
+  parsed<unique_ptr<Stmt>> parse_stmt();
   /// statements ::= statement ';'?
   ///            ::= statement ';' statements
-  std::unique_ptr<std::vector<Stmt>> parse_stmts();
+  parsed<unique_ptr<std::vector<Stmt>>> parse_stmts();
   /// module ::= mheader ';' statements*
-  std::unique_ptr<Module> parse_module();
+  parsed<unique_ptr<Module>> parse_module();
   /// imports ::= '#module'
 
   /// TEMP
   std::string to_string();
 };
+
+template <typename T, typename... Args>
+parsed<T> parse_error(Args&&... args) {
+  return expected<Error, T>(unexpect, std::forward<Args>(args)...);
+}
+template <typename T>
+parsed<T> pure(T&& t) {
+  return expect<Error, T>(std::forward<T>(t));
+}
+template <typename T, typename... Args>
+parsed<unique_ptr<T>> pure_unique(Args&&... args) {
+  return expect<Error, T>(std::make_unique<T>(args...));
+}
 } // namespace Parser
-
-namespace err {
-void parse_error(const char* place, const char* error);
-
-std::unique_ptr<AST::Expr> parse_errorE(const char* str);
-std::unique_ptr<AST::Prototype> parse_errorP(const char* str);
-std::unique_ptr<AST::Function> parse_errorF(const char* str);
-} // namespace err

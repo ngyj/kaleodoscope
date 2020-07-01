@@ -14,41 +14,61 @@ using std::unique_ptr;
 struct Span {
   std::string filename;
   int line, endl, begin, end;
+  /// offset from the beginning of the stream
+  size_t offset;
 
   Span(std::string filename)
-      : Span(filename, 1, 0, -1) {}
-  Span(std::string filename, int line)
-      : Span(filename, line, 0, -1) {}
-  Span(std::string filename, int line, int begin)
-      : Span(filename, line, begin, -1) {}
-  Span(std::string filename, int line, int begin, int end)
+      : Span(filename, 1, 0, -1, 0) {}
+  Span(std::string filename, int line, size_t offset)
+      : Span(filename, line, 0, -1, offset) {}
+  Span(std::string filename, int line, int begin, size_t offset)
+      : Span(filename, line, begin, -1, offset) {}
+  Span(std::string filename, int line, int begin, int end, size_t offset)
       : filename(filename)
       , line(line)
       , begin(begin)
-      , end(end) {}
-  Span(std::string filename, int line, int endl, int begin, int end)
+      , end(end)
+      , offset(offset) {}
+  Span(std::string filename, int line, int endl, int begin, int end,
+       size_t offset)
       : filename(filename)
       , line(line)
       , endl(line)
       , begin(begin)
-      , end(end) {}
+      , end(end)
+      , offset(offset) {}
+  Span(std::string filename, int line, int endl, int begin, int end,
+       size_t offset)
+      : filename(filename)
+      , line(line)
+      , endl(line)
+      , begin(begin)
+      , end(end)
+      , offset(offset) {}
 
-  int newline() {
+  inline int newline() { return newline(1); }
+  inline int newline(size_t newl_size) {
     begin = 0;
+    offset += i;
     return ++line;
   }
-  int next() { return ++begin; }
+  inline int next() {
+    offset++;
+    return ++begin;
+  }
   /// Helper to make a span from the argument and to the begin.
   /// Since getc() and next() used in it increments begin
   /// when we reach the end of the lexeme begin points to its end.
-  Span mkfrom(int start) const {
-    return Span(filename, line, start, begin - start);
+  inline Span mkfrom(int start) const {
+    return Span(filename, line, start, begin - start, offset - start);
   }
-  Span rangeFrom(Span& span) const {
-    return Span(filename, span.line, endl, span.begin, end);
+  /// make a span from the the argument to this
+  inline Span rangeFrom(Span& span) const {
+    return Span(filename, span.line, endl, span.begin, end, span.offset);
   }
-  Span rangeTo(Span& span) const {
-    return Span(filename, line, span.endl, begin, span.end);
+  /// make a span from this to the argument
+  inline Span rangeTo(Span& span) const {
+    return Span(filename, line, span.endl, begin, span.end, offset);
   }
 };
 
