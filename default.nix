@@ -1,4 +1,4 @@
-{ pkgs ? (import <nixpkgs> {})
+{ pkgs ? (import (import ./nixpkgs.nix) {})
 , source ? ./.
 , version ? "dev"
 } :
@@ -9,7 +9,7 @@ stdenvNoCC.mkDerivation {
     name = "mangekyou-${version}";
     inherit version;
     src = lib.cleanSource source;
-    buildInputs = [ llvm_7 clang_7 makeWrapper ];
+    buildInputs = [ llvm_10 clang_10 makeWrapper ];
     enableParallelBuilding = true;
 
     buildPhase = ''
