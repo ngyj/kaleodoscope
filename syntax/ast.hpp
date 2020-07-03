@@ -33,15 +33,7 @@ struct Span {
        size_t offset)
       : filename(filename)
       , line(line)
-      , endl(line)
-      , begin(begin)
-      , end(end)
-      , offset(offset) {}
-  Span(std::string filename, int line, int endl, int begin, int end,
-       size_t offset)
-      : filename(filename)
-      , line(line)
-      , endl(line)
+      , endl(endl)
       , begin(begin)
       , end(end)
       , offset(offset) {}
@@ -49,7 +41,7 @@ struct Span {
   inline int newline() { return newline(1); }
   inline int newline(size_t newl_size) {
     begin = 0;
-    offset += i;
+    offset += newl_size;
     return ++line;
   }
   inline int next() {
@@ -63,11 +55,11 @@ struct Span {
     return Span(filename, line, start, begin - start, offset - start);
   }
   /// make a span from the the argument to this
-  inline Span rangeFrom(Span& span) const {
+  inline Span from(Span& span) const {
     return Span(filename, span.line, endl, span.begin, end, span.offset);
   }
   /// make a span from this to the argument
-  inline Span rangeTo(Span& span) const {
+  inline Span to(Span& span) const {
     return Span(filename, line, span.endl, begin, span.end, offset);
   }
 };
@@ -124,7 +116,7 @@ public:
   Expr* lhs() const { return _lhs.get(); }
   Expr* rhs() const { return _rhs.get(); }
 
-  BinaryExpr(char op, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs,
+  BinaryExpr(char op, std::unique_ptr<Expr>&& lhs, std::unique_ptr<Expr>&& rhs,
              const Span& span)
       : Expr(span)
       , _op(op)
@@ -174,10 +166,15 @@ public:
   }
 
   ~Prototype() = default;
-  Prototype(const std::string& name, std::vector<std::string> args,
+  Prototype(const std::string& name, std::vector<std::string>&& args,
             bool ext = false)
       : _name(name)
       , _args(std::move(args))
+      , _ext(ext) {}
+  Prototype(const std::string& name, const std::vector<std::string>& args,
+            bool ext = false)
+      : _name(name)
+      , _args(args)
       , _ext(ext) {}
 
   llvm::Function* codegen();
@@ -191,7 +188,7 @@ public:
 };
 
 /// function defintion
-class Function : Stmt {
+class Function : public Stmt {
   std::unique_ptr<Prototype> _proto;
   std::unique_ptr<Expr> _body;
 
@@ -200,7 +197,7 @@ public:
   Expr* body() const { return _body.get(); }
 
   ~Function() = default;
-  Function(std::unique_ptr<Prototype> proto, std::unique_ptr<Expr> body)
+  Function(std::unique_ptr<Prototype>&& proto, std::unique_ptr<Expr>&& body)
       : _proto(std::move(proto))
       , _body(std::move(body)) {}
 

@@ -16,13 +16,18 @@ using span_ptr = std::shared_ptr<Span>;
 struct Error {
   std::string txt;
 
-  Error(std::string txt)
+  Error() = default;
+  Error(const std::string& txt)
+      : txt(txt) {}
+  Error(std::string& txt)
+      : txt(std::move(txt)) {}
+  Error(const char* txt)
       : txt(txt) {}
   std::string to_string();
   void log_error();
 };
 template <typename T>
-using parsed = expected<Error, T>;
+using parsed = expected<T, Error>;
 
 enum token_t {
   tok_eof = -1,
@@ -81,6 +86,8 @@ public:
   int peek_token(size_t n);
   /// get the precedence of an operator
   int get_token_prec(const Token* tok);
+  /// @TEMP
+  bool is_op(char op) const { return binop_prec.find(op) != binop_prec.end(); }
   /// get next character from src
   int getc();
 
@@ -119,7 +126,7 @@ public:
   parsed<unique_ptr<Stmt>> parse_stmt();
   /// statements ::= statement ';'?
   ///            ::= statement ';' statements
-  parsed<unique_ptr<std::vector<Stmt>>> parse_stmts();
+  parsed<std::vector<Stmt>> parse_stmts();
   /// module ::= mheader ';' statements*
   parsed<unique_ptr<Module>> parse_module();
   /// imports ::= '#module'
@@ -130,14 +137,15 @@ public:
 
 template <typename T, typename... Args>
 parsed<T> parse_error(Args&&... args) {
-  return expected<Error, T>(unexpect, std::forward<Args>(args)...);
+  return expected<T, Error>(unexpect, std::forward<Args>(args)...);
 }
 template <typename T>
 parsed<T> pure(T&& t) {
-  return expect<Error, T>(std::forward<T>(t));
+  return expected<T, Error>(std::forward<T>(t));
 }
 template <typename T, typename... Args>
 parsed<unique_ptr<T>> pure_unique(Args&&... args) {
-  return expect<Error, T>(std::make_unique<T>(args...));
+  return expected<unique_ptr<T>, Error>(
+      std::make_unique<T>(std::forward<Args>(args)...));
 }
 } // namespace Parser

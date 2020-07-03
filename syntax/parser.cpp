@@ -152,22 +152,52 @@ int Parser::next_token() {
   return cur_token->type;
 }
 
+template <typename B, typename A>
+unique_ptr<B> static_unique_cast(unique_ptr<A>&& p) {
+  auto res = static_cast<B*>(p.release());
+  return std::unique_ptr<B>(res);
+}
+template <typename B, typename A>
+unique_ptr<B> dynamic_parsed_cast(unique_ptr<A>&& p) {
+  if (B* res = dynamic_cast<B*>(p.get())) {
+    p.release();
+    return std::unique_ptr<B>(res);
+  }
+  return std::unique_ptr<B>(nullptr);
+}
+
+template <typename B, typename A>
+parsed<B*> static_parsed_cast(parsed<A*>&& p) {
+  if (p)
+    return pure(static_cast<B*>(p.value()));
+  return parse_error<B*>(p.error());
+}
+template <typename B, typename A>
+parsed<unique_ptr<B>> static_parsed_cast(parsed<unique_ptr<A>>&& p) {
+  if (p)
+    return pure(static_unique_cast<B>(std::move(p.value())));
+  return parse_error<unique_ptr<B>>(p.error());
+}
+
 /// numerexpr ::= number
 parsed<unique_ptr<Expr>> Parser::parse_num_expr() {
-  if (cur_token->type != tok_num)
+  if (cur_token->type != tok_number)
     // @TODO location and got
     return parse_error<unique_ptr<Expr>>("expected a number");
   auto num_val = strtod(cur_token->lexeme.c_str(), 0);
   auto res     = pure_unique<NumberExpr>(num_val, cur_token->span);
   next_token(); // consume token
-  return res;
+  return static_parsed_cast<Expr>(std::move(res));
 }
 /// parenexpr ::= '(' expression ')'
 parsed<unique_ptr<Expr>> Parser::parse_paren_expr() {
+  if (cur_token->type != '(')
+    return parse_error<unique_ptr<Expr>>("expected '('");
+
   next_token(); // eat (
   auto e = parse_expr();
   if (!e) // parse_expr should have logged the error
-    return nullptr;
+    return e;
 
   if (cur_token->type != ')')
     // @TODO location
@@ -187,26 +217,26 @@ parsed<unique_ptr<VariableExpr>> Parser::parse_id_expr() {
 }
 
 parsed<unique_ptr<CallExpr>> Parser::parse_call_expr() {
-  auto id = parse_id_expr();
+  using res_t = typename std::unique_ptr<CallExpr>;
+  auto id     = parse_id_expr();
   if (!id) // @TODO better error chaining. casting possible?
-    return parse_error<unique_ptr<CallExpr>>(id.error().txt);
-  std::string id_name = id->name();
+    return parse_error<res_t>(id.error().txt);
+  std::string id_name = (*id)->name();
   // call
-  auto beg = id->span;
+  auto beg = (*id)->span;
   next_token();
-  auto args = new std::vector<std::unique_ptr<Expr>>{};
+  std::vector<unique_ptr<Expr>> args{};
   if (cur_token->type != ')') {
     while (true) {
       if (auto arg = parse_expr())
         args.push_back(std::move(arg.value()));
       else
-        return parse_error<unique_ptr<CallExpr>>("could not parse arguments");
+        return parse_error<res_t>(std::string("could not parse arguments"));
 
       if (cur_token->type == ')')
         break;
       if (cur_token->type != ',')
-        return parse_error<unique_ptr<CallExpr>>(
-            "Excpected ')' or ',' in argument list");
+        return parse_error<res_t>("Excpected ')' or ',' in argument list");
       next_token();
     }
   }
@@ -214,7 +244,7 @@ parsed<unique_ptr<CallExpr>> Parser::parse_call_expr() {
   next_token();
 
   return pure_unique<CallExpr>(id_name, std::move(args),
-                               cur_token->span.rangeFrom(beg));
+                               cur_token->span.from(beg));
 }
 
 /// primary
@@ -225,10 +255,8 @@ parsed<unique_ptr<CallExpr>> Parser::parse_call_expr() {
 parsed<unique_ptr<Expr>> Parser::parse_primary() {
   switch (cur_token->type) {
   default: // @TODO error location
-    return parse_error<unique_ptr<Expr>>(
-        format("unknown token (%d) when expecting an expression",
-               cur_token->type)
-            .c_str());
+    return parse_error<unique_ptr<Expr>>(format(
+        "unknown token (%d) when expecting an expression", cur_token->type));
   case tok_identifier: {
     if (peek_token(1) == '(')
       return parse_call_expr();
@@ -244,18 +272,15 @@ parsed<unique_ptr<Expr>> Parser::parse_primary() {
 
 /// get current token precedence
 int Parser::get_token_prec(const Token* tok) {
-  if (!isascii(tok->type)) // TODO tok->type == token_op
+  if (!isascii(tok->type)) // @TODO tok->type == token_op
     return -1;
 
   // verify it's a declared binop
-  int tokprec = binop_prec[tok->type]; // TODO tok->lexeme
-  if (tokprec <= 0)
+  auto tokp = binop_prec.find(tok->type);
+  if (tokp == binop_prec.end())
     return -1;
-  return tokprec;
+  return tokp->first;
 }
-
-// @TEMP
-bool is_op(char op){return binop_prec.contains(op)}
 
 /// binoprhs
 ///    ::= ('+' primary)*
@@ -264,7 +289,7 @@ parsed<unique_ptr<Expr>> Parser::parse_binop_rhs(int expr_prec,
   while (1) {
     // @TODO if (cur_token->type != tok_op)
     if (!is_op(cur_token->type))
-      return pure<Expr>(std::move(lhs));
+      return pure<unique_ptr<Expr>>(std::move(lhs));
     int tprec = get_token_prec(cur_token.get());
     // if binop binds at least as tightly as the current binop,
     // then consume it, else otherwise we are done.
@@ -284,14 +309,18 @@ parsed<unique_ptr<Expr>> Parser::parse_binop_rhs(int expr_prec,
     // let pending op take rhs as its lhs
     int nprec = get_token_prec(cur_token.get());
     if (tprec < nprec) {
-      rhs = parse_binop_rhs(tprec + 1, std::move(rhs.value()));
-      if (!rhs)
-        return rhs;
+      auto rhs_ = parse_binop_rhs(tprec + 1, std::move(rhs.value()));
+      if (!rhs_)
+        return rhs_;
+      auto s = lhs->span.to((*rhs_)->span);
+      lhs    = std::make_unique<BinaryExpr>(binop, std::move(lhs),
+                                         std::move(rhs_.value()), s);
+    } else {
+      auto s = lhs->span.to((*rhs)->span);
+      // merge sides
+      lhs = std::make_unique<BinaryExpr>(binop, std::move(lhs),
+                                         std::move(rhs.value()), s);
     }
-    auto s = lhs->span;
-    // merge sides
-    lhs = std::pure_unique<BinaryExpr>(binop, std::move(lhs.value()),
-                                       std::move(rhs.value()), s);
   }
 }
 
@@ -325,12 +354,12 @@ parsed<std::vector<std::string>> Parser::parse_params() {
 
     next_token();
   }
-  return pure<args_t>(arg_names);
+  return pure<args_t>(std::move(arg_names));
 }
 
 /// protoype ::= id '(' params? ')'
-std::unique_ptr<Prototype> Parser::parse_prototype() {
-  using proto_t = typename unique_ptr<Prototype>;
+parsed<unique_ptr<Prototype>> Parser::parse_prototype() {
+  using proto_t = typename std::unique_ptr<Prototype>;
   if (cur_token->type != tok_identifier)
     return parse_error<proto_t>("Excpected function name in the prototype");
 
@@ -351,7 +380,7 @@ std::unique_ptr<Prototype> Parser::parse_prototype() {
 
   next_token(); // eat ')'
 
-  return std::pure_unique<Prototype>(fn_name, std::move(arg_names.value()));
+  return pure_unique<Prototype>(fn_name, std::move(arg_names.value()));
 }
 
 /// function ::= 'fn' prototype '{' expression '}'
@@ -363,10 +392,9 @@ parsed<unique_ptr<Function>> Parser::parse_function() {
     return parse_error<fun_t>(proto.error().txt);
 
   auto e = parse_expr();
-  if (e)
-    return std::pure_unique<Function>(std::move(proto.value()),
-                                      std::move(e.value()));
-  return parse_error<fun_t>(e.error().txt);
+  if (!e)
+    return parse_error<fun_t>(e.error().txt);
+  return pure_unique<Function>(std::move(proto.value()), std::move(e.value()));
 }
 
 /// external ::= 'extern' protoype
@@ -381,16 +409,16 @@ parsed<unique_ptr<Prototype>> Parser::parse_extern() {
 
 /// toplevelexpr ::= expression
 parsed<unique_ptr<Function>> Parser::parse_tle() {
-  return parse_expr().and_then([](auto e) {
+  return parse_expr().and_then([](auto&& e) {
     auto proto =
-        std::pure_unique<Prototype>("__anon__tle_", std::vector<std::string>());
-    return std::pure_unique<Function>(std::move(proto), std::move(e));
+        std::make_unique<Prototype>("__anon__tle_", std::vector<std::string>());
+    return pure_unique<Function>(std::move(proto), std::move(e));
   });
 }
 
 /// 'let' id = expr;
 parsed<unique_ptr<Stmt>> Parser::parse_assignment() {
-  using stmt_t = typename unique_ptr<Stmt>;
+  using stmt_t = typename std::unique_ptr<Stmt>;
   if (cur_token->type != tok_let)
     return parse_error<stmt_t>("@TODO");
   next_token(); // eat 'let'
@@ -410,17 +438,20 @@ parsed<unique_ptr<Stmt>> Parser::parse_assignment() {
 }
 
 // @TODO
-std::unique_ptr<Stmt> Parser::parse_stmt() {
+parsed<unique_ptr<Stmt>> Parser::parse_stmt() {
   switch (cur_token->type) {
   case tok_let:
-    return parse_assignment();
+    return pure<unique_ptr<Stmt>>(nullptr); // parse_assignment();
   case tok_identifier:
-    return parse_call_expr();
+    return pure<unique_ptr<Stmt>>(nullptr); // parse_call_expr();
   }
+  return parse_error<unique_ptr<Stmt>>("@TODO");
 }
 
 // @TODO
-std::unique_ptr<std::vector<Stmt>> Parser::parse_stmts() { return nullptr; }
+parsed<std::vector<Stmt>> Parser::parse_stmts() {
+  return parse_error<std::vector<Stmt>>("@TODO");
+}
 } // namespace Parser
 
 namespace err {
