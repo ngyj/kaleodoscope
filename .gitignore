@@ -5,3 +5,5 @@ TAGS
 result
 a.out
 mangekyou
+_build
+.merlin

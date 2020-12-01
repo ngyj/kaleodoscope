@@ -34,6 +34,9 @@ LINECOMMENT := // (!`\n`)*
 * infixr
 * infixl
 * infix
+* mod
+* use
+* open
 
 ### Operators
 ```
