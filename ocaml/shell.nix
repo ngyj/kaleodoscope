@@ -1,10 +1,11 @@
-with import <nixpkgs> {};
+{pkgs ? import <nixpkgs> {} }:
+with pkgs;
 
 let
-  ocamlPackages = pkgs.recurseIntoAttrs pkgs.ocamlPackages;
+  ocamlPackages = recurseIntoAttrs pkgs.ocamlPackages;
   ocamlVersion = (builtins.parseDrvName ocamlPackages.ocaml.name).version;
   findlibSiteLib = "${ocamlPackages.findlib}/lib/ocaml/${ocamlVersion}/site-lib";
-  ocamlInit = pkgs.writeText "ocamlinit" ''
+  ocamlInit = writeText "ocamlinit" ''
     let () =
       try Topdirs.dir_directory "${findlibSiteLib}"
       with Not_found -> ()
@@ -12,19 +13,15 @@ let
 
     #use "topfind";;
     #thread;;
-    #camlp4o;;
-    #require "core";;
-    #require "core.syntax";;
   '';
 in
-pkgs.mkShell rec {
-  buildInputs = with pkgs; [
+mkShell rec {
+  buildInputs =  [
     dune
   ] ++ ( with ocamlPackages;
   [
     ocaml
-    core
-    core_extended
+    batteries
     findlib
     utop
     merlin
@@ -38,6 +35,5 @@ pkgs.mkShell rec {
   shellHook = ''
     alias utop="utop -init ${ocamlInit}"
     alias ocaml="ocaml -init ${ocamlInit}"
-    emacs &
   '';
 }
