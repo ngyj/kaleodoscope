@@ -4,6 +4,8 @@
 #pragma once
 #include <stdint.h>
 #include <memory>
+#include <optional>
+#include <variant>
 
 // using isize = intmax_t;
 using i8 = int8_t;
@@ -20,11 +22,15 @@ using std::shared_ptr;
 using std::make_shared;
 using std::unique_ptr;
 using std::make_unique;
-
 using std::optional;
+using std::make_optional;
+using std::variant;
 
 template<typename T>
-using Ref = std::shared_ptr<T>;
+using option = std::optional;
+
+template<typename T>
+using Rc = std::shared_ptr<T>; // Arc would be better?
 
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
