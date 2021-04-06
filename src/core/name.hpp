@@ -1,6 +1,8 @@
 #include <prelude.hpp>
 #include <string>
 
+namespace mangekyou {
+
 // @FIXME
 class SrcLoc {};
 struct FastString {
@@ -72,3 +74,5 @@ struct OccName {
     return OccName(Sort::ClsName, name);
   }
 };
+
+} // namespace mangekyou

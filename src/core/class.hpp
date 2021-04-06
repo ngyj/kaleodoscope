@@ -2,6 +2,8 @@
 #include "type.hpp"
 #include "subst.hpp"
 
+namespace mangekyou::tc {
+
 /* example:
  * `(Num a) => a -> Int` is represented by
  * ```
@@ -10,27 +12,19 @@
  *     )
  * ```
  */
+
 struct Pred {
   Id cl;
   Rc<Type> ty;
 
-// @TODO Eq
   bool overlap(const Pred& other) {
     return mguPred(*this, other).has_value();
   }
-};
 
-Pred apply_subst(const Substs& s, const Pred& p) {
-  return IsIn(t.cl, Substs::apply(s, p.ty));
-}
-std::vector<TyVar>(const Pred& p) { return Substs::tv(p.ty); }
-std::vector<TyVar> tv(const std::vector<Pred>& ps);
-
-template<typename T>
-struct Qual {
-  std::vector<Pred> ctx;
-  T hd;
-
+  /* substitutions */
+  Pred apply_subst(const Substs& s);
+  std::vector<TyVar>();
+  static std::vector<TyVar> tv(const std::vector<Pred>& ps);
 
 // @TODO Eq
 };
@@ -39,41 +33,69 @@ Pred IsIn(Id a, Rc<Type> ty) {
   return Pred(a, ty);
 }
 
-Qual apply_subst(const Substs& s, const Rc<Qual<T>>& q);
-std::vector<TyVar> tv(const Rc<Qual<T>>& q);
+
+template<typename T>
+struct Qual {
+  std::vector<Pred> ctx;
+  T hd;
+
+  Qual(const T& hd) : ctx(std::vector<Pred>{}), hd(hd) {}
+  Qual(const std::vector<Pred>& ctx, const T& hd) ctx(ctx), hd(hd) {}
+
+  Qual apply_subst(const Substs& s, const Rc<Qual<T>>& q);
+  std::vector<TyVar> tv(const Rc<Qual<T>>& q);
+
+// @TODO Eq
+};
 
 
 
-optional<Substs> mguPred(const Pred& p1, const Pred& p2) {
-  if (p1.cl != p2.cl)
-    return {};
-  return mgu(p1.ty, p2.ty);
-}
-optional<Substs> mguMatch(const Pred& p1, const Pred& p2) {
-  if (p1.cl != p2.cl)
-    return {};
-  return match(p1.ty, p2.ty);
-}
+
+
+expected<Substs, string> mguPred(const Pred& p1, const Pred& p2);
+expected<Subst, string> mguMatch(const Pred& p1, const Pred& p2);
 
 
 using Inst = Rc<Qual<Pred>>;
 
+template<typename Ps, typename T>
+Inst make_inst(Ps&& ctx, T&& t) {
+  return make_shared<Qual<Pred>>(std::forward(ctx), std::forward(t));
+}
+template<typename T>
+Inst make_inst(T&& t) {
+  return make_shared<Qual<Pred>>(std::forward(t));
+}
+
 struct Class {
+  using super_type = std::vector<Id>;
+  using insts_type = std::vector<Inst>;
   /// super classes
-  std::vector<Id> supers;
+  super_type supers;
   /// instances
-  std::vector<Inst> insts;
+  insts_type insts;
+
+  Class(const super_type& supers) : supers(supers), insts(std::vector{}) {}
+  Class(const insts_type& insts) : supers(std::vector{}), insts(insts) {}
+  Class(const super_type& supers, const insts_type& insts) : supers(supers), insts(insts) {}
 };
 
 struct ClassEnv {
   std::map<Id, Class> classes;
   std::vector<Rc<Type>> defaults;
 
-  std::vector<Id> super(Id);
-  std::vector<Inst> insts(Id);
+  ClassEnv(const std::map<Id, Class>& classes, const std::vector<Rc<Type>>& defaults)
+    : classes(classes), defaults(defaults) {}
 
-  bool defined(Id a) { return classes.contains(a); }
-  ClassEnv modify(Id a, Class c);
-  optional<ClassEnv> addClass(const Id&, const std::vector<Id>&);
-  optional<ClassEnv> addInst(const std::vector<Pred>& p, const Pred& p);
+  option<Class::super_type> super(const Id&);
+  option<Class::insts_type> insts(const Id&);
+
+  inline bool defined(const Id& a);
+  /// creates new env with a new class
+  ClassEnv modify(const Id& a, Class c);
+
+  /// creates a new env with added class
+  expected<ClassEnv, string> addClass(const Id&, const std::vector<Id>&);
+  expected<ClassEnv, string> addInst(const std::vector<Pred>& p, const Pred& p);
+}
 }

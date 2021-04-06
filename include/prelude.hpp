@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <variant>
+#include "expected"
 
 // using isize = intmax_t;
 using i8 = int8_t;
@@ -18,6 +19,8 @@ using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 
+
+using std::string;
 using std::shared_ptr;
 using std::make_shared;
 using std::unique_ptr;
@@ -27,11 +30,11 @@ using std::make_optional;
 using std::variant;
 
 template<typename T>
-using option = std::optional;
-
+using option = std::optional<T>;
 template<typename T>
 using Rc = std::shared_ptr<T>; // Arc would be better?
 
+using namespace tl;
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // required in sepples17

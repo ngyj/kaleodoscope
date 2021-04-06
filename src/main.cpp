@@ -3,6 +3,8 @@
 #include <map>
 
 int main() {
+   std::exit(0);
+   //
    auto xs = std::map<int, std::string>{{0, "foo"}, {3, "bar"}};
    auto ys = xs;
    for (auto& [k, v] : ys) {

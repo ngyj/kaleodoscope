@@ -4,6 +4,8 @@
 #include <variant>
 #include <vector>
 
+namespace mangekyou {
+
 // using TyVar = Var;
 using KindOrType = Type;
 using Id         = std::string;
@@ -89,4 +91,15 @@ struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
   Kind kind() {
     return std::visit([](auto&& arg) { return arg.kind(); }, *this);
   }
+}
+}
+
+/// type scheme
+/// @IMPROVEMENT assumes no explicit foralls,
+/// assumes `Type::Gen`'s kind is `Scheme::kinds[Type::Gen::i]`.
+/// even the paper admits it sucks
+struct Scheme {
+  std::vector<Kind> kinds;
+  // @TODO
+  Qual<Type> ty;
 }

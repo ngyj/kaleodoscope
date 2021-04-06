@@ -4,6 +4,7 @@
 #include "type.hpp"
 #include <prelude.hpp>
 
+namespace mangekyou::tc {
 // using Subst  = std::tuple<TyVar, Type>;
 struct Substs : std::map<TyVar, Rc<Type>> {
   using std::map<TyVar, Rc<Type>>::map;
@@ -22,21 +23,21 @@ struct Substs : std::map<TyVar, Rc<Type>> {
       s2.insert(kv);
     }
   }
-  optional<Susbts> merge(const Substs& s1, const Substs& s2) {
+  expected<Susbts, string> merge(const Substs& s1, const Substs& s2) {
     auto set = std::set<TyVar>();
     for (const auto [k, _] : s1) { set.insert(k); }
     for (const auto [k, _] : s2) { set.insert(k); }
     for (auto i : set) {
       auto tv = Types::TyVar(i);
       if (apply(s1, tv) != apply(s2, tv))
-        return {};
+        return make_unexpected("merge failed");
     }
     auto s = s1;
     for(auto kv: s2) {
-      return {s2.insert(s1)};
+      s2.insert(s1);
     }
+    return expected(s2);
   }
-
 };
 
 Subst make_substs(TyVar tv, const Rc<Type>& t) {
@@ -74,15 +75,15 @@ std::vector<TyVar> tv(Type& t) {
 
 // @TODO error reporting instead of just optional
 /// most general unifier
-optional<Substs> mgu(Rc<Type> t1, Rc<Type> t2);
+expected<Substs, string> mgu(Rc<Type> t1, Rc<Type> t2);
 
 // @TODO error reporting instead of just optional
 /// special case variable unification
-optional<Substs> varBind(Tyvar tv, Rc<Type> t);
+exptected<Substs, string> varBind(Tyvar tv, Rc<Type> t);
 
 // @TODO error reporting instead of just optional
 /// find substitution s such that apply(s, t1) = t2
-optional<Substs> match(Rc<Type> t1, Rc<Type> t2) {
+expected<Substs, string> match(Rc<Type> t1, Rc<Type> t2) {
   if (t1.is<TyApp>() && t2.is<TyApp>()) {
     auto sl = match(t1.get<TyApp>().lhs, t2.get<TyApp>().lhs);
     if (!sl)
@@ -96,9 +97,11 @@ optional<Substs> match(Rc<Type> t1, Rc<Type> t2) {
     return Substs::nullSubsts();
 
   } else if (t1.is<TyVar>() && t1.kind() == t2.kind()) {
-    return { Substs::make_subst(t1.get<TyVar>(), t2) }
+    return Substs::make_subst(t1.get<TyVar>(), t2);
 
   } else {
-    return {};
+    return "could not match types";
   }
 }
+
+} // namespace mangekyou::tc
