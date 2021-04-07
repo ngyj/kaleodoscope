@@ -17,19 +17,18 @@ struct Pred {
   Id cl;
   Rc<Type> ty;
 
-  bool overlap(const Pred& other) {
-    return mguPred(*this, other).has_value();
-  }
+  Pred(const Id& cl, Rc<Type> ty) : cl(cl), ty(ty) {}
+  bool overlap(const Pred& other); 
 
   /* substitutions */
   Pred apply_subst(const Substs& s);
-  std::vector<TyVar>();
+  std::vector<TyVar> tv();
   static std::vector<TyVar> tv(const std::vector<Pred>& ps);
 
 // @TODO Eq
 };
 
-Pred IsIn(Id a, Rc<Type> ty) {
+Pred IsIn(const Id& a, Rc<Type> ty) {
   return Pred(a, ty);
 }
 
@@ -53,7 +52,7 @@ struct Qual {
 
 
 expected<Substs, string> mguPred(const Pred& p1, const Pred& p2);
-expected<Subst, string> mguMatch(const Pred& p1, const Pred& p2);
+expected<Substs, string> mguMatch(const Pred& p1, const Pred& p2);
 
 
 using Inst = Rc<Qual<Pred>>;

@@ -5,24 +5,22 @@ namespace mangekyou {
 
 // @FIXME
 class SrcLoc {};
-struct FastString {
-  shared_ptr<std::string> str;
 
-  FastString(const char* str)
-      : str(make_shared<std::string>(str)) {}
-  FastString(std::string str)
-      : str(make_shared<std::string>(str)) {}
-  FastString(std::string& str)
-      : str(make_shared<std::string>(str)) {}
-  FastString(std::string&& str)
-      : str(make_shared<std::string>(str)) {}
-  FastString(FastString&& str)
-      : str(std::move(str.str)) {}
-  FastString(const FastString& str)
-      : str(str.str) {}
+struct FastString {
+  using table_type = std::set<std::string>;
+  static table_type table = table_type{};
+
+  table_type::iterator str;
+
+  FastString(const char* str) : str(table.emplace(str)->first()) {}
+  FastString(const std::string& str) : str(table.emplace(str)->first()) {}
+
+  std::string string() {
+    return *(this->str);
+  }
 
   bool operator==(FastString& other) { return this->str == other.str; }
-  bool operator!=(FastString& other) { return !(*this == other); }
+  bool operator!=(FastString& other) { return this->str != other); }
   bool operator<(FastString& other) { return this->str < other.str; }
   bool operator>(FastString& other) { return this->str > other.str; }
   bool operator<=(FastString& other) { return this->str <= other.str; }

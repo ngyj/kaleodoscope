@@ -10,7 +10,7 @@ Pred Pred::apply_subst(const Substs& s) {
   return IsIn(t.cl, Substs::apply(s, p.ty));
 }
 std::vector<TyVar> Pred::tv() {
-  return Substs::tv(p.ty);
+  return this->ty->tv();
 }
 std::vector<TyVar> Pred::tv(const std::vector<Pred>& ps);
 
@@ -19,7 +19,7 @@ expected<Substs, string> mguPred(const Pred& p1, const Pred& p2) {
     return {};
   return mgu(p1.ty, p2.ty);
 }
-expected<Subst, string> mguMatch(const Pred& p1, const Pred& p2) {
+expected<Substs, string> mguMatch(const Pred& p1, const Pred& p2) {
   if (p1.cl != p2.cl)
     return {};
   return match(p1.ty, p2.ty);
