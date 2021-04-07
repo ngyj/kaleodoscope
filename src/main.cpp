@@ -1,33 +1,22 @@
 #include <iostream>
-#include <string>
 #include <set>
+#include <string>
 
-
-std::set<std::string> table = std::set<std::string> {};
-
-struct FastString {
-  using table_type = std::set<std::string>;
-
-  table_type::iterator str;
-
-  FastString(const char* str) : str(table.emplace(str).first) {}
-  FastString(const std::string& str) : str(table.emplace(str).first) {}
-
-  std::string string() {
-    return *(this->str);
-  }
-
-  bool operator==(FastString& other) { return this->str == other.str; }
-  bool operator!=(FastString& other) { return this->str != other.str; }
-};
-
+#include "core/name.hpp"
 
 int main() {
-  auto foo = FastString("foo");
-  auto bar = FastString("bar");
+  using namespace mangekyou::name;
+  // FastString::init();
+
+  auto foo  = FastString("foo");
+  auto bar  = FastString("bar");
   auto foo2 = FastString("foo");
-  std::cout << "foo == foo : " << (foo == foo) << std::endl;
+  std::cout << "foo == foo  : " << (foo == foo) << std::endl;
   std::cout << "foo == foo2 : " << (foo == foo2) << std::endl;
-  std::cout << "foo == foo : " << (bar == foo) << std::endl;
+  std::cout << "bar == foo  : " << (bar == foo) << std::endl;
+
+  for (auto& i : FastString::_table) {
+    std::cout << i << std::endl;
+  }
 }
 //

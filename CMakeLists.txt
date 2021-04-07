@@ -15,7 +15,9 @@ include_directories( include )
 
 project( mangekyou )
 
+add_library( mangekyou-lib src/core/name.cpp src/core/type.cpp)
 add_executable( mangekyou src/main.cpp )
+target_link_libraries( mangekyou mangekyou-lib )
 
 add_custom_target( run
   COMMAND ${CMAKE_BINARY_DIR}/${RESULT_BINARY}

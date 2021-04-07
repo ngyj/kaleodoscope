@@ -1,32 +1,34 @@
 #include <prelude.hpp>
+#include <set>
 #include <string>
 
-namespace mangekyou {
+namespace mangekyou::name {
 
 // @FIXME
-class SrcLoc {};
-
 struct FastString {
   using table_type = std::set<std::string>;
-  static table_type table = table_type{};
+  static table_type _table;
 
   table_type::iterator str;
 
-  FastString(const char* str) : str(table.emplace(str)->first()) {}
-  FastString(const std::string& str) : str(table.emplace(str)->first()) {}
+  explicit FastString(const char* str)
+      : str(_table.emplace(str).first) {}
+  explicit FastString(const std::string& str)
+      : str(_table.emplace(str).first) {}
 
-  std::string string() {
-    return *(this->str);
-  }
+  std::string string() { return *(this->str); }
 
   bool operator==(FastString& other) { return this->str == other.str; }
-  bool operator!=(FastString& other) { return this->str != other); }
-  bool operator<(FastString& other) { return this->str < other.str; }
-  bool operator>(FastString& other) { return this->str > other.str; }
-  bool operator<=(FastString& other) { return this->str <= other.str; }
-  bool operator>=(FastString& other) { return this->str >= other.str; }
+  bool operator!=(FastString& other) { return this->str != other.str; }
+  bool operator<(FastString& other) { return *(this->str) < *(other.str); }
+  bool operator>(FastString& other) { return *(this->str) > *(other.str); }
+  bool operator<=(FastString& other) { return *(this->str) <= *(other.str); }
+  bool operator>=(FastString& other) { return *(this->str) >= *(other.str); }
 };
 
+using Id = FastString;
+
+/*
 struct Name {
   enum class Sort { External, Internal, System } sort;
   OccName occ;
@@ -40,10 +42,10 @@ struct Name {
   static Name make_external(OccName occ, usize uniq) {
     return Name(Sort::External, occ, uniq);
   }
-  static Name make_external(OccName occ, usize uniq) {
+  static Name make_internal(OccName occ, usize uniq) {
     return Name(Sort::Internal, occ, uniq);
   }
-  static Name make_external(OccName occ, usize uniq) {
+  static Name make_system(OccName occ, usize uniq) {
     return Name(Sort::System, occ, uniq);
   }
 };
@@ -72,5 +74,6 @@ struct OccName {
     return OccName(Sort::ClsName, name);
   }
 };
+/**/
 
-} // namespace mangekyou
+} // namespace mangekyou::name
