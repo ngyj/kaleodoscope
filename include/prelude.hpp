@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <stdint.h>
+#include <string>
 #include <variant>
 
 /** type synonyms */

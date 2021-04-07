@@ -36,18 +36,18 @@ struct Kind : std::variant<KStar, KArr> {
 
   // static const Kind STAR = Star{};
 
-  Kind Arrow(const Rc<Kind>& lhs, const Rc<Kind>& rhs);
-  Kind Star();
+  static Kind Arrow(const Rc<Kind>& lhs, const Rc<Kind>& rhs);
+  static Kind Star();
 
   template <typename T>
   const bool is() const {
     return std::holds_alternative<T>(*this);
   }
 
-  bool operator==(const Kind& rhs);
-  bool operator!=(const Kind& rhs);
+  bool operator==(const Kind& rhs) const;
+  bool operator!=(const Kind& rhs) const;
 
-  std::string to_string() {
+  std::string to_string() const {
     // @FIXME std::visit, for some arcane reason, just won't work no matter what
     // I try. Which is fun, because it completely defeats the point of using
     // std::variant!!!!! Yes, I'm mad.
@@ -70,12 +70,12 @@ struct TyVar {
       : id(id)
       , _kind(_kind) {}
 
-  bool operator==(const TyVar& other);
-  bool operator!=(const TyVar& other);
-  bool operator<(const TyVar& other);
+  bool operator==(const TyVar& other) const;
+  bool operator!=(const TyVar& other) const;
+  bool operator<(const TyVar& other) const;
 
-  Kind kind();
-  std::string to_string();
+  Kind kind() const;
+  std::string to_string() const;
 };
 
 struct TyCon {
@@ -86,8 +86,8 @@ struct TyCon {
       : id(id)
       , _kind(_kind) {}
 
-  Kind kind();
-  std::string to_string();
+  Kind kind() const;
+  std::string to_string() const;
 };
 
 // @FIXME
@@ -99,8 +99,8 @@ struct TyApp {
       : lhs(lhs)
       , rhs(rhs) {}
 
-  Kind kind();
-  std::string to_string();
+  Kind kind() const;
+  std::string to_string() const;
 };
 /// generic/quantified type variables
 struct TyGen {
@@ -109,8 +109,8 @@ struct TyGen {
   TyGen(i32 i)
       : i(i) {}
 
-  Kind kind();
-  std::string to_string();
+  Kind kind() const;
+  std::string to_string() const;
 };
 
 #define FALLTHROUGH_TYPE(f)                                                    \
@@ -121,37 +121,46 @@ struct TyGen {
   if (this->is<TyApp>())                                                       \
     return std::get<TyApp>(*this).f();                                         \
   if (this->is<TyGen>())                                                       \
-    return std::get<TyGen>(*this).f();
+  return std::get<TyGen>(*this).f()
 
 namespace tc {
 struct Subst;
 }
 struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
-  using std::variant<TyVar, TyCon, TyApp, TyGen>::variant;
+  using inner = std::variant<TyVar, TyCon, TyApp, TyGen>;
+  using inner::variant;
 
-  static Type Var(const Id& i, const Kind& k) { return TyVar(i, k); }
-  static Type Con(const Id& i, const Kind& k) { return TyCon(i, k); }
-  static Type App(const Rc<Type>& lhs, Rc<Type>& rhs) {
-    return TyApp(lhs, rhs);
-  }
-  static Type Gen(i32 i) { return TyGen(i); }
+  Type(const Type& other)
+      : inner(static_cast<const inner&>(other)) {}
+  Type(Type&& other)
+      : inner(static_cast<inner&&>(std::move(other))) {}
 
-  Kind kind() {
-    // @FIXME std::visit, for some arcane reason, just won't work no matter
-    // what
-    // I try. Which is fun, because it completely defeats the point of using
-    // std::variant!!!!! Yes, I'm mad.
-    FALLTHROUGH_TYPE(kind);
+  static Rc<Type> Var(Id i, const Kind& k) {
+    return make_shared<Type>(TyVar(i, k));
   }
-  std::string to_string() { FALLTHROUGH_TYPE(to_string); }
+  static Rc<Type> Con(Id i, const Kind& k) {
+    return make_shared<Type>(TyCon(i, k));
+  }
+  static Rc<Type> App(const Rc<Type>& lhs, Rc<Type>& rhs) {
+    return make_shared<Type>(TyApp(lhs, rhs));
+  }
+  static Rc<Type> Gen(i32 i) { return make_shared<Type>(TyGen(i)); }
+
+  // @FIXME std::visit, for some arcane reason, just won't work no matter
+  // what
+  // I try. Which is fun, because it completely defeats the point of using
+  // std::variant!!!!! Yes, I'm mad.
+  Kind kind() const { FALLTHROUGH_TYPE(kind); }
+  std::string to_string() const { FALLTHROUGH_TYPE(to_string); }
+
   template <typename T>
-  bool is() {
+  bool is() const {
     return std::holds_alternative<T>(*this);
   }
 
   // return Rc<Type> instead?
   /// apply a substitution
-  Type apply(const tc::Subst& s);
+  Rc<Type> apply(const tc::Subst& s);
   /// retrieve all type variables
   std::vector<TyVar> tv();
   static std::vector<TyVar> tv(std::vector<Rc<Type>>);

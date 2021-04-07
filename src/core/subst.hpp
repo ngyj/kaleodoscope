@@ -1,18 +1,27 @@
+#include <expected>
 #include <prelude.hpp>
 
+#include <initializer_list>
 #include <map>
 #include <set>
 #include <tuple>
 
 #include "type.hpp"
 
+using tl::expected;
+
 namespace mangekyou::tc {
 // using Subst  = std::tuple<TyVar, Type>;
 struct Subst : std::map<TyVar, Rc<Type>> {
-  using self_type = std::map<TyVar, Rc<Type>>;
+  using self_type = std::map<TyVar, Rc<Type>>::map;
 
-  static Subst nullSubst() { return self_type(); };
-  static Subst make(TyVar tv, const Rc<Type>& t) { return self_type{{tv, t}}; }
+  Subst()
+      : self_type() {}
+  Subst(std::initializer_list<self_type::value_type> init)
+      : self_type(init) {}
+
+  static Subst nullSubst() { return Subst{}; };
+  static Subst make(TyVar tv, const Rc<Type>& t) { return Subst{{tv, t}}; }
 
   /// `apply (compose s1 s2) = apply s1 . apply s2`
   static Subst compose(const Subst& s1, const Subst& s2);
@@ -24,7 +33,7 @@ struct Subst : std::map<TyVar, Rc<Type>> {
 expected<Subst, string> mgu(Rc<Type> t1, Rc<Type> t2);
 
 /// special case variable unification
-exptected<Subst, string> varBind(Tyvar tv, Rc<Type> t);
+expected<Subst, string> varBind(TyVar tv, Rc<Type> t);
 
 /// find substitution s such that apply(s, t1) = t2
 expected<Subst, string> match(Rc<Type> t1, Rc<Type> t2);

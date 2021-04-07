@@ -11,19 +11,33 @@ struct FastString {
 
   table_type::iterator str;
 
+  FastString(const FastString& other)
+      : str(other.str) {}
   explicit FastString(const char* str)
       : str(_table.emplace(str).first) {}
   explicit FastString(const std::string& str)
       : str(_table.emplace(str).first) {}
 
-  std::string string() { return *(this->str); }
+  std::string string() const { return *(this->str); }
 
-  bool operator==(FastString& other) { return this->str == other.str; }
-  bool operator!=(FastString& other) { return this->str != other.str; }
-  bool operator<(FastString& other) { return *(this->str) < *(other.str); }
-  bool operator>(FastString& other) { return *(this->str) > *(other.str); }
-  bool operator<=(FastString& other) { return *(this->str) <= *(other.str); }
-  bool operator>=(FastString& other) { return *(this->str) >= *(other.str); }
+  bool operator==(const FastString& other) const {
+    return this->str == other.str;
+  }
+  bool operator!=(const FastString& other) const {
+    return this->str != other.str;
+  }
+  bool operator<(const FastString& other) const {
+    return *(this->str) < *(other.str);
+  }
+  bool operator>(const FastString& other) const {
+    return *(this->str) > *(other.str);
+  }
+  bool operator<=(const FastString& other) const {
+    return *(this->str) <= *(other.str);
+  }
+  bool operator>=(const FastString& other) const {
+    return *(this->str) >= *(other.str);
+  }
 };
 
 using Id = FastString;
