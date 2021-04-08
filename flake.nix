@@ -9,7 +9,7 @@
       let pkgs = import nixpkgs { inherit system; };
       in {
         devShell = pkgs.mkShell.override
-          { stdenv = pkgs.llvmPackages_11.stdenv;}
+          { stdenv = pkgs.llvmPackages_11.libcxxStdenv; }
           {
             buildInputs = with pkgs; [ cmake ninja ];
           };

@@ -9,6 +9,7 @@ if (WIN32)
     set(    CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS} -Wno-return-type" )
 endif (WIN32)
 if (UNIX)
+    set( CMAKE_CXX_COMPILER clang++ )
     set(      RESULT_BINARY mangekyou )
 endif(UNIX)
 
