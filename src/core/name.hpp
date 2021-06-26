@@ -1,30 +1,29 @@
 #pragma once
 #include <prelude.hpp>
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <iostream>
 
 namespace mangekyou::name {
 
-// @FIXME
 struct FastString {
-  using table_type = std::map<std::string, Rc<std::string>>;
+  using table_type = std::unordered_map<std::string, std::string*>;
   static table_type s_table;
 
-  Rc<std::string> str;
+  table_type::mapped_type str;
 
   FastString(const FastString& other)
       : str(other.str) {}
   explicit FastString(const char* str) {
     auto& ref = s_table[str];
     if (!ref)
-      ref = make_shared<std::string>(str);
+      ref = new std::string(str);
     this->str = ref;
   }
   explicit FastString(const std::string& str) {
     auto& ref = s_table[str];
     if (!ref)
-      ref = make_shared<std::string>(str);
+      ref = new std::string(str);
     this->str = ref;
   }
 
@@ -98,6 +97,6 @@ struct OccName {
     return OccName(Sort::ClsName, name);
   }
 };
-/**/
+*/
 
 } // namespace mangekyou::name
