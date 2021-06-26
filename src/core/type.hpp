@@ -37,7 +37,7 @@ struct Kind : std::variant<KStar, KArr> {
   // static const Kind STAR = Star{};
 
   static Kind Arrow(const Rc<Kind>& lhs, const Rc<Kind>& rhs);
-  static Kind Star();
+  static Kind Star() { return KStar{}; }
 
   template <typename T>
   const bool is() const {
@@ -146,10 +146,6 @@ struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
   }
   static Rc<Type> Gen(i32 i) { return make_shared<Type>(TyGen(i)); }
 
-  // @FIXME std::visit, for some arcane reason, just won't work no matter
-  // what
-  // I try. Which is fun, because it completely defeats the point of using
-  // std::variant!!!!! Yes, I'm mad.
   Kind kind() const { FALLTHROUGH_TYPE(kind); }
   std::string to_string() const { FALLTHROUGH_TYPE(to_string); }
 
@@ -164,6 +160,16 @@ struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
   /// retrieve all type variables
   std::vector<TyVar> tv();
   static std::vector<TyVar> tv(std::vector<Rc<Type>>);
+
+  // primitive types
+  static Rc<Type> Unit; // = Type::Gen(0);
+  static Rc<Type> Char; // = Type::Con(name::FastString("Char"), Kind::Star());
+  static Rc<Type> Int;
+  static Rc<Type> Integer;
+  static Rc<Type> Float;
+  static Rc<Type> Double;
+
+  static Rc<Type> List;
 };
 
 using KindOrType = Type;

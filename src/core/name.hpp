@@ -1,22 +1,32 @@
+#pragma once
 #include <prelude.hpp>
-#include <set>
+#include <map>
 #include <string>
+#include <iostream>
 
 namespace mangekyou::name {
 
 // @FIXME
 struct FastString {
-  using table_type = std::set<std::string>;
-  static table_type _table;
+  using table_type = std::map<std::string, Rc<std::string>>;
+  static table_type s_table;
 
-  table_type::iterator str;
+  Rc<std::string> str;
 
   FastString(const FastString& other)
       : str(other.str) {}
-  explicit FastString(const char* str)
-      : str(_table.emplace(str).first) {}
-  explicit FastString(const std::string& str)
-      : str(_table.emplace(str).first) {}
+  explicit FastString(const char* str) {
+    auto& ref = s_table[str];
+    if (!ref)
+      ref = make_shared<std::string>(str);
+    this->str = ref;
+  }
+  explicit FastString(const std::string& str) {
+    auto& ref = s_table[str];
+    if (!ref)
+      ref = make_shared<std::string>(str);
+    this->str = ref;
+  }
 
   std::string string() const { return *(this->str); }
 

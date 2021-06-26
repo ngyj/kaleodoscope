@@ -20,14 +20,9 @@ bool Kind::operator==(const Kind& rhs) const {
   }
   return std::get<KArr>(*this).is_equal(std::get<KArr>(rhs));
 }
+
 bool Kind::operator!=(const Kind& rhs) const {
-  if (this->is<KStar>() && rhs.is<KStar>()) {
-    return false;
-  }
-  if (this->is<KStar>() || rhs.is<KStar>()) {
-    return true;
-  }
-  return std::get<KArr>(*this).is_equal(std::get<KArr>(rhs));
+  return !(*this == rhs);
 }
 
 /** types */
@@ -89,4 +84,16 @@ std::vector<TyVar> Type::tv() {
   tv_go(v, *this);
   return v;
 }
+
+auto Type::Unit = Type::Gen(0);
+auto Type::Char = Type::Con(name::FastString("Char"), Kind::Star());
+auto Type::Int = Type::Con(name::FastString("Int"), Kind::Star());
+auto Type::Integer = Type::Con(name::FastString("Integer"), Kind::Star());
+auto Type::Float = Type::Con(name::FastString("Float"), Kind::Star());
+auto Type::Double = Type::Con(name::FastString("Double"), Kind::Star());
+
+// TODO
+// auto Type::List = Type::Con(FastString("[]"), Kind::Arrow());
+// auto Type::Arrow = Type::Con(FastString("->"), Kind::Arrow());
+// auto Type::Tuple2 = Type::Con(FastString("(,)"), Kind::Arrow());
 } // namespace mangekyou

@@ -1,5 +1,5 @@
 #include "name.hpp"
 
 namespace mangekyou::name {
-FastString::table_type FastString::_table = FastString::table_type{};
+  FastString::table_type FastString::s_table = FastString::table_type{};
 }

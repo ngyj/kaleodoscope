@@ -2,21 +2,25 @@
 #include <set>
 #include <string>
 
-#include "core/name.hpp"
+#include "core/type.hpp"
 
 int main() {
+  std::cout << "hi" << "\n";
+  std::cout << std::flush;
+
   using namespace mangekyou::name;
-  // FastString::init();
+  using namespace mangekyou;
 
-  auto foo  = FastString("foo");
-  auto bar  = FastString("bar");
-  auto foo2 = FastString("foo");
-  std::cout << "foo == foo  : " << (foo == foo) << std::endl;
-  std::cout << "foo == foo2 : " << (foo == foo2) << std::endl;
-  std::cout << "bar == foo  : " << (bar == foo) << std::endl;
+  std::cout << (FastString("()").string() == FastString("()").string())
+            << '\n';
+  std::cout << (FastString("()").string() == FastString(")(").string())
+            << '\n';
 
-  for (auto& i : FastString::_table) {
-    std::cout << i << std::endl;
-  }
+  std::cout << Type::Unit->to_string() << "\n";
+  std::cout << std::flush;
+
+  std::cout << Type::Char->to_string() << "\n";
+  // std::cout << tUnit.kind().to_string() << "\n";
+  // std::cout << tUnit.kind() == tInt.kind() ? "true" : "false" << "\n"
 }
 //
