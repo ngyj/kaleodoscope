@@ -1,68 +1,30 @@
 #pragma once
 #include <prelude.hpp>
-#include <functional>
-#include <unordered_set>
-#include <set>
+#include <unordered_map>
 #include <string>
 #include <iostream>
 
 namespace mangekyou::name {
 
 struct FastString {
-  using inner_type = std::string*;
-private:
-  struct less {
-    constexpr bool operator()(std::string* lhs, std::string* rhs) const {
-      return std::less<std::string>{}(*lhs, *rhs);
-    }
-  };
-  struct equal_to {
-    constexpr bool operator()(std::string* lhs, std::string* rhs) const {
-      return std::equal_to<std::string>{}(*lhs, *rhs);
-    }
-    bool operator()(std::string* lhs, const char* rhs) const {
-      return std::equal_to<std::string>{}(*lhs, rhs);
-    }
-    bool operator()(const char* lhs, std::string* rhs) const {
-      return std::equal_to<std::string>{}(lhs, *rhs);
-    }
-  };
-  struct hash {
-    std::size_t operator()(std::string* x) const {
-      return std::hash<std::string>{}(*x);
-    }
-    std::size_t operator()(const char* x) const {
-      return std::hash<std::string>{}(x);
-    }
-  };
-
-public:
-  using table_type = std::unordered_set<std::string*, hash, equal_to>;
-
+  using table_type = std::unordered_map<std::string, std::string*>;
   static table_type s_table;
 
-  inner_type str;
+  table_type::mapped_type str;
 
   FastString(const FastString& other)
       : str(other.str) {}
   explicit FastString(const char* str) {
-    auto* x = new std::string(str);
-    auto it = s_table.find(x);
-    if (it == s_table.end()) {
-      s_table.insert(x);
-      this->str = x;
-    } else {
-      this->str = *it;
-    }
+    auto& ref = s_table[str];
+    if (!ref)
+      ref = new std::string(str);
+    this->str = ref;
   }
   explicit FastString(const std::string& str) {
-    auto it = s_table.find((std::string*) &str);
-    if (it == s_table.end()) {
-      auto [it, _] = s_table.insert(new std::string(str));
-      this->str = *it;
-    } else {
-      this->str = *it;
-    }
+    auto& ref = s_table[str];
+    if (!ref)
+      ref = new std::string(str);
+    this->str = ref;
   }
 
   std::string string() const { return *(this->str); }
