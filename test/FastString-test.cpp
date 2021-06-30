@@ -1,4 +1,5 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "name.hpp"
 
 using namespace mangekyou::name;
@@ -22,4 +23,27 @@ TEST(FastStringTest, dups) {
   auto b = FastString("hi");
   EXPECT_EQ(a.str, b.str);
   EXPECT_EQ(a, b);
+}
+
+TEST(FastStringTest, fastcmp) {
+  auto* one = new std::string("hi");
+  auto* two = new std::string("hi");
+  EXPECT_EQ(FastString("hi"), FastString("hi"));
+  EXPECT_EQ(FastString("hi"), FastString(*one));
+  EXPECT_EQ(FastString(*one), FastString(*two));
+
+  auto* three = new std::string("bye");
+  auto* four = new std::string("bye");
+  EXPECT_EQ(FastString(*three), FastString(*four));
+  EXPECT_EQ(FastString("bye"), FastString(*three));
+  EXPECT_EQ(FastString("bye"), FastString(*four));
+}
+
+TEST(FastStringTest, nfastcmp) {
+  auto* one = new std::string("hi");
+  auto* two = new std::string("bye");
+  EXPECT_NE(FastString("hi"), FastString("bye"));
+  EXPECT_NE(FastString("bye"), FastString(*one));
+  EXPECT_NE(FastString("hi"), FastString(*two));
+  EXPECT_NE(FastString(*one), FastString(*two));
 }

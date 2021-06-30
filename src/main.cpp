@@ -5,22 +5,20 @@
 #include "core/type.hpp"
 
 int main() {
-  std::cout << "hi" << "\n";
-  std::cout << std::flush;
+  std::string* ptr1 = new std::string("foo");
+  std::string* ptr2 = new std::string("foo");
 
-  using namespace mangekyou::name;
-  using namespace mangekyou;
+  std::string& ref1 = *ptr1;
+  std::string& ref2 = *ptr2;
+  std::string* pref1 = &ref1;
 
-  std::cout << (FastString("()").string() == FastString("()").string())
-            << '\n';
-  std::cout << (FastString("()").string() == FastString(")(").string())
-            << '\n';
+  std::string val1 = *ptr1;
+  std::string val2 = *ptr2;
 
-  std::cout << Type::Unit->to_string() << "\n";
-  std::cout << std::flush;
+  std::cout << (ptr1 == ptr2) << '\n'; // false
+  std::cout << (ref1 == ref2) << '\n'; // true
+  std::cout << (val1 == val2) << '\n'; // true
+  std::cout << "-----\n";
 
-  std::cout << Type::Char->to_string() << "\n";
-  // std::cout << tUnit.kind().to_string() << "\n";
-  // std::cout << tUnit.kind() == tInt.kind() ? "true" : "false" << "\n"
+  std::cout << ((std::string*)&ref1 == ptr1) << '\n'; // false
 }
-//
