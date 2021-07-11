@@ -20,5 +20,5 @@ int main() {
   std::cout << (val1 == val2) << '\n'; // true
   std::cout << "-----\n";
 
-  std::cout << ((std::string*)&ref1 == ptr1) << '\n'; // false
+  std::cout << ((std::string*)&ref1 == ptr1) << '\n'; // true
 }

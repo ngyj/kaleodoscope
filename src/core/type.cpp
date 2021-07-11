@@ -25,6 +25,14 @@ bool Kind::operator!=(const Kind& rhs) const {
   return !(*this == rhs);
 }
 
+Kind Kind::Star() { return KStar{}; }
+Kind Kind::Arrow(const Rc<Kind>& lhs, const Rc<Kind>& rhs) {
+  return KArr{ lhs, rhs };
+}
+Kind Kind::mkUnary() {
+  return Kind::Arrow(make_shared<Kind>(Kind::Star()), make_shared<Kind>(Kind::Star()));
+}
+
 /** types */
 
 bool TyVar::operator==(const TyVar& other) const {

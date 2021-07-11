@@ -37,7 +37,9 @@ struct Kind : std::variant<KStar, KArr> {
   // static const Kind STAR = Star{};
 
   static Kind Arrow(const Rc<Kind>& lhs, const Rc<Kind>& rhs);
-  static Kind Star() { return KStar{}; }
+  static Kind Star();
+
+  static Kind mkUnary();
 
   template <typename T>
   const bool is() const {
@@ -121,7 +123,7 @@ struct TyGen {
   if (this->is<TyApp>())                                                       \
     return std::get<TyApp>(*this).f();                                         \
   if (this->is<TyGen>())                                                       \
-  return std::get<TyGen>(*this).f()
+    return std::get<TyGen>(*this).f()
 
 namespace tc {
 struct Subst;
@@ -154,16 +156,16 @@ struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
     return std::holds_alternative<T>(*this);
   }
 
-  // return Rc<Type> instead?
   /// apply a substitution
   Rc<Type> apply(const tc::Subst& s);
+
   /// retrieve all type variables
   std::vector<TyVar> tv();
   static std::vector<TyVar> tv(std::vector<Rc<Type>>);
 
   // primitive types
-  static Rc<Type> Unit; // = Type::Gen(0);
-  static Rc<Type> Char; // = Type::Con(name::FastString("Char"), Kind::Star());
+  static Rc<Type> Unit;
+  static Rc<Type> Char;
   static Rc<Type> Int;
   static Rc<Type> Integer;
   static Rc<Type> Float;
@@ -175,9 +177,10 @@ struct Type : std::variant<TyVar, TyCon, TyApp, TyGen> {
 using KindOrType = Type;
 
 /// type scheme
-/// @IMPROVEMENT assumes no explicit foralls,
+/// @FIXME `Scheme` assumes no explicit foralls,
 /// assumes `Type::Gen`'s kind is `Scheme::kinds[Type::Gen::i]`.
-/// even the paper admits it sucks
+/// also, even the paper admits it sucks
+
 /*
 struct Scheme {
 std::vector<Kind> kinds;
